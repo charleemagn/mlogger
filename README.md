@@ -1,6 +1,6 @@
 # A system for tracking training of ML models
 
 <p align="center">
-  <img src="logo.png" alt="Логотип проекта" width="600">
+  <img src="logo.png" alt="Логотип проекта" width="300">
 </p>
 
