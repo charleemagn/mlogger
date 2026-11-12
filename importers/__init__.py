@@ -16,7 +16,6 @@ from pathlib import Path
 from . import mlflow, tensorboard, ultralytics
 from .base import ImportedRun, MetricPoint
 
-# Порядок важен: у Ultralytics рядом с results.csv бывают и event-файлы TensorBoard
 IMPORTERS = [ultralytics, mlflow, tensorboard]
 
 __all__ = ["IMPORTERS", "ImportedRun", "MetricPoint", "load"]

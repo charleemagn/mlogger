@@ -22,7 +22,6 @@ def _is_run_dir(path: Path) -> bool:
 def _run_dirs(path: Path) -> list[Path]:
     if _is_run_dir(path):
         return [path]
-    # Подходит и вся папка mlruns, и папка одного эксперимента
     return sorted(p.parent for p in path.rglob("meta.yaml") if _is_run_dir(p.parent) and ".trash" not in p.parts)
 
 

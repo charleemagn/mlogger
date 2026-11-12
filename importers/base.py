@@ -11,13 +11,13 @@ class MetricPoint:
     key: str
     step: int
     value: float
-    ts: float | None = None  # unix-время в секундах, если источник его пишет
+    ts: float | None = None
 
 
 @dataclass
 class ImportedRun:
     name: str
-    source: str  # "ultralytics" | "tensorboard" | "mlflow"
+    source: str
     path: Path
     params: dict = field(default_factory=dict)
     metrics: list[MetricPoint] = field(default_factory=list)

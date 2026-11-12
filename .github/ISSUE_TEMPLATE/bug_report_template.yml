@@ -1,0 +1,65 @@
+name: "\U0001F41E Bug report"
+description: Report a bug in MLogger
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Before you start, please make sure you are on the latest version of MLogger.
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Have you searched existing issues? 🔎
+      options:
+        - label: I have searched and found no existing issues
+          required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A minimal script or the exact steps in the interface that reproduce the problem.
+      value: |
+        ```python
+        import mlogger
+
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: If relevant, add a screenshot of the page where the problem is visible.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of the console window where MLogger is running, and of your training script if the client is involved.
+      render: shell
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Operating system, Python version, browser. For hardware problems add the output of `python -m monitor`.
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - I can work around it
+        - Blocking usage of MLogger
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        📌 A report with a small reproduction is fixed much faster than one without.

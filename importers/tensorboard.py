@@ -17,8 +17,6 @@ from .base import ImportedRun, MetricPoint
 
 SOURCE = "tensorboard"
 
-# --- Минимальный разбор protobuf -------------------------------------------
-
 
 def _varint(buf: bytes, pos: int) -> tuple[int, int]:
     result = shift = 0
@@ -58,34 +56,31 @@ def _tensor_scalar(buf: bytes) -> float | None:
         if num == 1:
             dtype = value
         elif num == 2:
-            has_dims = any(n == 2 for n, _, _ in _fields(value))  # TensorShapeProto.dim
+            has_dims = any(n == 2 for n, _, _ in _fields(value))
         elif num == 4:
             content = value
-        elif num == 5:  # float_val (packed или одиночный)
+        elif num == 5:
             values += struct.unpack(f"<{len(value) // 4}f", value)
-        elif num == 6:  # double_val
+        elif num == 6:
             values += struct.unpack(f"<{len(value) // 8}d", value)
     if has_dims:
         return None
     if values:
         return float(values[0])
-    if dtype == 1 and len(content) == 4:  # DT_FLOAT
+    if dtype == 1 and len(content) == 4:
         return struct.unpack("<f", content)[0]
-    if dtype == 2 and len(content) == 8:  # DT_DOUBLE
+    if dtype == 2 and len(content) == 8:
         return struct.unpack("<d", content)[0]
     return None
 
 
 def _plugin_name(metadata: bytes) -> str:
     for num, _, value in _fields(metadata):
-        if num == 1:  # SummaryMetadata.plugin_data
+        if num == 1:
             for n, _, v in _fields(value):
-                if n == 1:  # PluginData.plugin_name
+                if n == 1:
                     return v.decode()
     return ""
-
-
-# --- Чтение файлов ---------------------------------------------------------
 
 
 def _records(path: Path) -> Iterator[bytes]:
@@ -98,7 +93,7 @@ def _records(path: Path) -> Iterator[bytes]:
             (length,) = struct.unpack("<Q", header[:8])
             data = f.read(length)
             if len(data) < length or len(f.read(4)) < 4:
-                return  # файл ещё дописывается — берём то, что есть
+                return
             yield data
 
 
@@ -130,7 +125,6 @@ def _read_events(path: Path, plugins: dict[str, str]) -> Iterator[MetricPoint]:
             if simple is not None:
                 yield MetricPoint(key=tag, step=step, value=simple, ts=wall_time)
             elif tensor is not None and plugins.get(tag) == "scalars":
-                # TF2 пишет metadata только в первом событии тега, поэтому plugins общий на запуск
                 scalar = _tensor_scalar(tensor)
                 if scalar is not None:
                     yield MetricPoint(key=tag, step=step, value=scalar, ts=wall_time)
@@ -157,7 +151,7 @@ def load(path: Path) -> list[ImportedRun]:
         name = run_dir.relative_to(root).as_posix() if run_dir != root else run_dir.name
         run = ImportedRun(name=name, source=SOURCE, path=run_dir)
         plugins: dict[str, str] = {}
-        for f in files:  # имена файлов содержат время создания, сортировка = хронология
+        for f in files:
             run.metrics.extend(_read_events(f, plugins))
         runs.append(run)
     return runs

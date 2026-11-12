@@ -45,7 +45,6 @@ def load(path: Path) -> list[ImportedRun]:
     run = ImportedRun(name=run_dir.name, source=SOURCE, path=run_dir, params=_read_args(run_dir))
 
     with csv_path.open(newline="", encoding="utf-8") as f:
-        # Старые версии выравнивают колонки пробелами: "      train/box_loss"
         reader = csv.reader(f)
         header = [h.strip() for h in next(reader)]
         for row in reader:

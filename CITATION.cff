@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: Please cite this project using these metadata.
+title: "MLogger: A Local Tracker for Machine Learning Training"
+abstract: >-
+  MLogger is an experiment tracker that runs entirely on the
+  user's own machine. It records training metrics, monitors
+  GPUs from different vendors and explains the state of a
+  training run in plain language: learning, overfitting,
+  plateau or divergence. It has no third-party dependencies.
+type: software
+authors:
+  - name: MLogger contributors
+repository-code: "https://github.com/charleemagn/mlogger"
+url: "https://github.com/charleemagn/mlogger"
+license: GPL-3.0-or-later
+version: 0.1.0
+date-released: "2026-11-12"
+keywords:
+  - machine learning
+  - experiment tracking
+  - training monitoring
+  - GPU monitoring

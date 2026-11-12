@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlogger"
+version = "0.1.0"
+description = "Client for MLogger, a local tracker for ML model training"
+requires-python = ">=3.9"
+license = { text = "GPL-3.0-or-later" }
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["mlogger*"]

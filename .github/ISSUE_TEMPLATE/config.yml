@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Getting started
+    url: https://github.com/charleemagn/mlogger#installation
+    about: Installation, the first run and the framework integrations are covered in the README
+  - name: 🔒 Security vulnerability
+    url: https://github.com/charleemagn/mlogger/security/advisories/new
+    about: Please report vulnerabilities privately, not in a public issue
