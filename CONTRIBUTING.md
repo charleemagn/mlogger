@@ -51,6 +51,7 @@ The interface is plain JavaScript without a build step: edit a file in `ui/`, re
 - `diagnostics/` — the training diagnosis and the metric glossary
 - `importers/` — importers for Ultralytics, TensorBoard and MLflow logs
 - `i18n/` — helpers for the two interface languages, Russian and English
+- `desktop/` — the Windows app: a C# shell that starts the server and shows the interface in its own window
 - `demo/` — runnable examples
 - `test/` — tests
 - `readme_files/` — images for the README; `readme_files/ru/` holds the Russian README and its screenshots
@@ -68,6 +69,18 @@ python start.py --data ./data-dev
 ```
 
 `python start.py demo` adds demo runs, and `python demo/quickstart.py` sends a simulated training run through the real client.
+
+## 🪟 Building the Windows app
+
+The app in `desktop/` targets .NET Framework 4.8, which is part of Windows 10 and 11, so the resulting `MLogger.exe` needs no runtime installation. To build it you need the [.NET SDK](https://dotnet.microsoft.com/download):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File desktop\build.ps1
+```
+
+The script puts the app into `dist\MLogger` and packs `dist\MLogger-win-x64.zip`. With `-BundlePython` it also downloads the embeddable Python from python.org into the folder, which makes the build self-contained. Pushing a tag such as `v0.1.0` runs the same build on GitHub and attaches the archive to the release.
+
+While developing, `desktop\bin\Release\MLogger.exe` finds the repository above it and uses the same `data` folder as `start.bat`.
 
 ## 🧪 Testing
 
@@ -93,6 +106,7 @@ MLogger speaks Russian and English, and every user-facing text must exist in bot
 - **Interface (`ui/js/`)** — write the Russian text in the code and wrap it in `t("...")`; add the English translation to `ui/js/lang/en.js` under the same key. Values go into the text through numbered placeholders: `t("Удалить запуск «{0}»?", [name])`.
 - **Server, diagnosis and glossary** — build texts with `T("русский", "English")` from the `i18n` package. The API returns them in the language of the request.
 - **Command line** — `start.py` and `monitor/__main__.py` use a local `_("русский", "English")` helper.
+- **Windows app** — texts live in `desktop/Strings.cs` as `Pick("русский", "English")`.
 - **README** — `README.md` is the English version and `readme_files/ru/README.md` the Russian one; keep them in sync.
 
 The tests fail if an interface string has no English translation or if Russian text is left outside `t()`.

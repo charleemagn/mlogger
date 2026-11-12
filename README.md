@@ -35,7 +35,22 @@ It takes three lines of Python to connect a training script, so let's get starte
 
 ### Installation
 
-**Prerequisite**: MLogger requires [Python 3.9 or higher](https://www.python.org/downloads/). Nothing else — there is no `pip install` step for the server.
+There are two ways to run MLogger. Both keep everything on your computer and use the same data format.
+
+#### Windows app
+
+Download `MLogger-win-x64.zip` from the [Releases](https://github.com/charleemagn/mlogger/releases) page, unpack it anywhere and run **`MLogger.exe`**. Nothing else needs to be installed — Python is included in the archive.
+
+<img src="readme_files/desktop.png" alt="MLogger as a Windows app">
+
+The app opens MLogger in its own window and starts the local server by itself. When you close the window it stays in the system tray and keeps collecting metrics, so a training run is never left without a tracker; choose **Exit** in the tray menu to quit completely. Your history is stored in `%LOCALAPPDATA%\MLogger`, so replacing the app folder with a newer version does not touch it.
+
+> [!NOTE]
+> The app is not code-signed, so Windows SmartScreen may warn about an unknown publisher on the first launch. Choose **More info → Run anyway**.
+
+#### From source, on any system
+
+**Prerequisite**: [Python 3.9 or higher](https://www.python.org/downloads/). Nothing else — there is no `pip install` step for the server.
 
 Download the project (**Code → Download ZIP** on GitHub, or clone it):
 
@@ -183,7 +198,9 @@ python -m monitor                   show which GPUs the monitor sees
 python -m unittest discover test    run the tests
 ```
 
-Everything is stored in a single SQLite file, `data/mlogger.db`, inside the project folder. Delete the `data` folder to start from scratch, or copy it to move your history to another computer.
+To build the Windows app yourself you need the [.NET SDK](https://dotnet.microsoft.com/download): `powershell -ExecutionPolicy Bypass -File desktop\build.ps1` puts `MLogger.exe` into `dist\MLogger`. Add `-BundlePython` to include Python in the folder.
+
+When started from source, everything is stored in a single SQLite file, `data/mlogger.db`, inside the project folder (the Windows app keeps it in `%LOCALAPPDATA%\MLogger\data`). Delete the `data` folder to start from scratch, or copy it to move your history to another computer.
 
 ### What's Next?
 
@@ -204,6 +221,7 @@ MLogger deliberately has no third-party dependencies. It is built on:
 - the [Python](https://www.python.org) standard library — the HTTP server, the client and the hardware monitor
 - [SQLite](https://www.sqlite.org) — storage, in a single file
 - plain JavaScript, HTML and CSS — the interface, with no build step
+- C# with [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) — the Windows app, a thin shell around the same server and interface
 
 ## License
 

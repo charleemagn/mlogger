@@ -129,7 +129,7 @@ export default {
   "Видеокарты на этой машине не обнаружены. Поддерживаются NVIDIA (nvidia-smi), а в Windows — любые карты, которые видит Диспетчер задач.": "No GPUs were found on this machine. Supported: NVIDIA (nvidia-smi) and, on Windows, any card Task Manager can see.",
   "Что происходит с обучением прямо сейчас и чем закончились прошлые запуски": "What is happening with training right now and how past runs ended",
   "Демо-запуски добавлены — один из них обучается прямо сейчас": "Demo runs added — one of them is training right now",
-  "Следите за обучением моделей, не выходя из браузера": "Watch your models train without leaving the browser",
+  "Следите за обучением моделей и понимайте, что происходит": "Watch your models train — and understand what is going on",
   "MLogger собирает метрики обучения, следит за видеокартами и объясняет простыми словами, что происходит: модель учится, переобучается или пора останавливать. Всё хранится на вашем компьютере.": "MLogger collects training metrics, watches your GPUs and explains in plain words what is going on: the model is learning, overfitting, or it is time to stop. Everything stays on your computer.",
   "Посмотреть на демо-данных": "View demo data",
   "Импортировать свои логи": "Import your own logs",

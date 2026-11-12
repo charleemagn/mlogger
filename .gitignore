@@ -13,3 +13,6 @@ venv/
 .DS_Store
 Thumbs.db
 *.log
+/dist/
+desktop/bin/
+desktop/obj/
