@@ -2,15 +2,16 @@ import { h, clear, icon, ask, toast, fmtNum, fmtAxis, fmtDur, fmtDate, fmtClock,
 import { api } from "../api.js";
 import { ChartCard, SLOTS, healthRing, sparkline } from "../chart.js";
 import { selected } from "./runs.js";
+import { t } from "../i18n.js";
 
 const SECTIONS = [
-  ["score", "Качество", "Насколько хорошо модель решает задачу. Чем выше линия, тем лучше."],
-  ["loss", "Потери", "Насколько модель ошибается. Хорошее обучение — линии идут вниз и не расходятся друг с другом."],
-  ["lr", "Настройки обучения", "Как менялся шаг обучения."],
-  ["other", "Прочее", "Остальные числа, которые записывал код обучения."],
+  ["score", t("Качество"), t("Насколько хорошо модель решает задачу. Чем выше линия, тем лучше.")],
+  ["loss", t("Потери"), t("Насколько модель ошибается. Хорошее обучение — линии идут вниз и не расходятся друг с другом.")],
+  ["lr", t("Настройки обучения"), t("Как менялся шаг обучения.")],
+  ["other", t("Прочее"), t("Остальные числа, которые записывал код обучения.")],
 ];
 const SPLIT_ORDER = { train: 0, val: 1, test: 2 };
-const SPLIT_NAME = { train: "обучение", val: "проверка", test: "тест" };
+const SPLIT_NAME = { train: t("обучение"), val: t("проверка"), test: t("тест") };
 
 function flatten(obj, prefix = "", out = {}) {
   for (const [k, v] of Object.entries(obj || {})) {
@@ -38,10 +39,10 @@ export function mount(root, ctx) {
   const chartsBox = h("div");
   const hwBox = h("div");
   const paramsBox = h("div", { class: "grid two" });
-  const notes = h("textarea", { class: "input", placeholder: "Что проверяли в этом запуске, что получилось, что попробовать дальше…",
-    onchange: async () => { try { await api.patchRun(id, { notes: notes.value }); toast("Заметка сохранена", "ok"); } catch (e) { toast(e.message, "crit"); } } });
+  const notes = h("textarea", { class: "input", placeholder: t("Что проверяли в этом запуске, что получилось, что попробовать дальше…"),
+    onchange: async () => { try { await api.patchRun(id, { notes: notes.value }); toast(t("Заметка сохранена"), "ok"); } catch (e) { toast(e.message, "crit"); } } });
 
-  root.append(h("a", { class: "back", href: "#/runs" }, icon("back", "sm"), "Все запуски"), head);
+  root.append(h("a", { class: "back", href: "#/runs" }, icon("back", "sm"), t("Все запуски")), head);
 
   function build() {
     built = true;
@@ -54,15 +55,15 @@ export function mount(root, ctx) {
       statusRow, tagsRow,
       h("div", { class: "grid split" }, healthCard, tiles),
       h("div", { class: "section" },
-        h("h2", null, "Графики"),
+        h("h2", null, t("Графики")),
         h("div", { class: "filters", style: { marginTop: "10px" } },
-          h("label", null, "Сглаживание", smoothInput),
-          h("div", { class: "seg", role: "group", "aria-label": "Ось X" }, axisBtn("step", "По шагам"), axisBtn("time", "По времени")),
-          h("label", null, logInput, "Логарифмическая шкала")),
+          h("label", null, t("Сглаживание"), smoothInput),
+          h("div", { class: "seg", role: "group", "aria-label": t("Ось X") }, axisBtn("step", t("По шагам")), axisBtn("time", t("По времени"))),
+          h("label", null, logInput, t("Логарифмическая шкала"))),
         chartsBox),
-      h("div", { class: "section" }, h("h2", null, "Железо во время обучения"), hwBox),
-      h("div", { class: "section" }, h("h2", null, "Параметры и окружение"), paramsBox),
-      h("div", { class: "section" }, h("h2", null, "Заметки"), notes));
+      h("div", { class: "section" }, h("h2", null, t("Железо во время обучения")), hwBox),
+      h("div", { class: "section" }, h("h2", null, t("Параметры и окружение")), paramsBox),
+      h("div", { class: "section" }, h("h2", null, t("Заметки")), notes));
   }
 
   function renderHead() {
@@ -70,25 +71,25 @@ export function mount(root, ctx) {
     clear(head, h("div", { class: "page-head", style: { marginBottom: "12px" } },
       h("div", null,
         h("h1", null, run.name),
-        h("div", { class: "sub" }, `Проект «${run.project}» · начат ${fmtDate(run.created_at)}${run.host ? ` · ${run.host}` : ""}`)),
+        h("div", { class: "sub" }, t("Проект «{0}» · начат {1}{2}", [run.project, fmtDate(run.created_at), run.host ? ` · ${run.host}` : ""]))),
       h("div", { class: "actions" },
-        h("button", { class: "btn", onclick: rename }, icon("edit", "sm"), "Переименовать"),
-        h("button", { class: "btn", title: "Добавить к сравнению и открыть его", onclick: () => { selected.add(id); ctx.navigate(`#/compare?ids=${[...selected].slice(0, 8).join(",")}`); } }, icon("compare", "sm"), "Сравнить"),
-        h("button", { class: "btn danger", onclick: remove }, icon("trash", "sm"), "Удалить"))));
+        h("button", { class: "btn", onclick: rename }, icon("edit", "sm"), t("Переименовать")),
+        h("button", { class: "btn", title: t("Добавить к сравнению и открыть его"), onclick: () => { selected.add(id); ctx.navigate(`#/compare?ids=${[...selected].slice(0, 8).join(",")}`); } }, icon("compare", "sm"), t("Сравнить")),
+        h("button", { class: "btn danger", onclick: remove }, icon("trash", "sm"), t("Удалить")))));
     clear(statusRow,
       statusChip(run.status),
       h("span", { class: "dim" }, icon("clock", "sm")), h("span", { class: "dim", style: { marginLeft: "-4px" } }, fmtDur(s.duration)),
-      s.max_step != null ? h("span", { class: "dim" }, `шаг ${fmtNum(s.max_step, 0)}${run.total_steps ? ` из ${fmtNum(run.total_steps, 0)}` : ""}`) : null,
+      s.max_step != null ? h("span", { class: "dim" }, t("шаг {0}{1}", [fmtNum(s.max_step, 0), run.total_steps ? t(" из {0}", [fmtNum(run.total_steps, 0)]) : ""])) : null,
       s.progress != null && run.status === "running"
         ? [h("div", { class: "progress", style: { width: "180px" }, role: "progressbar", "aria-valuenow": Math.round(s.progress * 100), "aria-valuemin": 0, "aria-valuemax": 100 },
             h("i", { style: { width: `${s.progress * 100}%` } })),
-          h("span", { class: "dim" }, `${Math.round(s.progress * 100)}%${s.eta != null ? ` · осталось ≈ ${fmtDur(s.eta)}` : ""}`)]
+          h("span", { class: "dim" }, `${Math.round(s.progress * 100)}%${s.eta != null ? t(" · осталось ≈ {0}", [fmtDur(s.eta)]) : ""}`)]
         : null,
-      run.source !== "sdk" ? h("span", { class: "chip" }, run.source === "demo" ? "демо-данные" : `импорт: ${run.source}`) : null);
+      run.source !== "sdk" ? h("span", { class: "chip" }, run.source === "demo" ? t("демо-данные") : t("импорт: {0}", [run.source])) : null);
   }
 
   function renderTags() {
-    const input = h("input", { class: "tag-input", placeholder: "+ метка", "aria-label": "Добавить метку", maxLength: 40,
+    const input = h("input", { class: "tag-input", placeholder: t("+ метка"), "aria-label": t("Добавить метку"), maxLength: 40,
       onkeydown: (e) => { if (e.key === "Enter" && input.value.trim()) setTags([...run.tags, input.value.trim()]); } });
     clear(tagsRow, run.tags.map((t) => tagEl(t, { onRemove: () => setTags(run.tags.filter((x) => x !== t)) })), input);
   }
@@ -99,15 +100,15 @@ export function mount(root, ctx) {
   }
 
   async function rename() {
-    const v = await ask({ title: "Переименовать запуск", fields: [{ name: "name", label: "Имя", value: run.name }], ok: "Сохранить" });
+    const v = await ask({ title: t("Переименовать запуск"), fields: [{ name: "name", label: t("Имя"), value: run.name }], ok: t("Сохранить") });
     if (!v || !v.name) return;
     try { run = { ...run, name: (await api.patchRun(id, { name: v.name })).name }; renderHead(); } catch (e) { toast(e.message, "crit"); }
   }
 
   async function remove() {
-    const ok = await ask({ title: `Удалить запуск «${run.name}»?`, text: "Метрики и параметры будут удалены без возможности восстановления.", ok: "Удалить", danger: true });
+    const ok = await ask({ title: t("Удалить запуск «{0}»?", [run.name]), text: t("Метрики и параметры будут удалены без возможности восстановления."), ok: t("Удалить"), danger: true });
     if (!ok) return;
-    try { await api.deleteRun(id); selected.delete(id); toast("Запуск удалён", "ok"); ctx.navigate("#/runs"); } catch (e) { toast(e.message, "crit"); }
+    try { await api.deleteRun(id); selected.delete(id); toast(t("Запуск удалён"), "ok"); ctx.navigate("#/runs"); } catch (e) { toast(e.message, "crit"); }
   }
 
   function renderHealth() {
@@ -119,14 +120,14 @@ export function mount(root, ctx) {
       h("div", { class: "health" },
         healthRing(d.health),
         h("div", null,
-          h("div", { class: "muted", style: { fontSize: "12.5px" } }, "Диагноз обучения"),
+          h("div", { class: "muted", style: { fontSize: "12.5px" } }, t("Диагноз обучения")),
           h("div", { class: "verdict" }, h("span", { class: `lv-${d.verdict.level}`, style: { display: "inline-flex" } }, icon(d.verdict.level)), d.verdict.label),
           h("div", { class: "dim", style: { marginTop: "4px", fontSize: "13px" } },
-            d.health == null ? "Индекс здоровья появится, когда накопятся данные." : "Индекс здоровья: 100 — без замечаний. Считается по форме кривых и работе железа."))),
+            d.health == null ? t("Индекс здоровья появится, когда накопятся данные.") : t("Индекс здоровья: 100 — без замечаний. Считается по форме кривых и работе железа.")))),
       h("div", { class: "findings" }, d.findings.map((f) => h("div", { class: "finding" },
         h("span", { class: `lv-${f.level}` }, icon(f.level)),
         h("div", null, h("b", null, f.title), h("p", { class: f.code === "failed" ? "pre" : "" }, f.text))))),
-      d.findings.length ? null : h("div", { class: "muted", style: { marginTop: "12px" } }, "Замечаний нет."));
+      d.findings.length ? null : h("div", { class: "muted", style: { marginTop: "12px" } }, t("Замечаний нет.")));
   }
 
   function renderTiles() {
@@ -138,22 +139,22 @@ export function mount(root, ctx) {
       const info = keys[key];
       const best = info.direction && info.best != null;
       return h("div", { class: "card tile" },
-        h("div", { class: "label" }, h("span", { class: "mono" }, key), i === 0 && key === s.main_key ? h("span", { class: "chip", style: { fontSize: "11px", padding: "0 7px" } }, "главная") : null),
+        h("div", { class: "label" }, h("span", { class: "mono" }, key), i === 0 && key === s.main_key ? h("span", { class: "chip", style: { fontSize: "11px", padding: "0 7px" } }, t("главная")) : null),
         h("div", { class: "value" }, fmtNum(best ? info.best : info.last)),
-        h("div", { class: "note" }, best ? `лучшее, шаг ${fmtNum(info.best_step, 0)} · сейчас ${fmtNum(info.last)}` : `последнее значение, шаг ${fmtNum(info.last_step, 0)}`),
+        h("div", { class: "note" }, best ? t("лучшее, шаг {0} · сейчас {1}", [fmtNum(info.best_step, 0), fmtNum(info.last)]) : t("последнее значение, шаг {0}", [fmtNum(info.last_step, 0)])),
         h("div", { class: "spark" }, sparkline(info.spark, { quiet: i > 0 })),
-        info.hint ? h("div", { class: "note", style: { marginTop: "6px" } }, info.title === info.label ? info.hint : `${info.title}. ${info.hint}`) : null);
+        info.hint ? h("div", { class: "note", style: { marginTop: "6px" } }, [info.title === info.label ? "" : info.title + ".", info.hint, info.note].filter(Boolean).join(" ")) : null);
     }),
-    !picks.length ? h("div", { class: "card empty" }, h("h3", null, "Метрик пока нет"), h("div", null, "Они появятся после первого вызова run.log().")) : null,
-    options.length > 1 ? h("div", { class: "row dim", style: { gridColumn: "1 / -1", fontSize: "13px" } }, "Главная метрика:",
-      h("select", { class: "input", style: { padding: "3px 8px" }, "aria-label": "Главная метрика",
+    !picks.length ? h("div", { class: "card empty" }, h("h3", null, t("Метрик пока нет")), h("div", null, t("Они появятся после первого вызова run.log()."))) : null,
+    options.length > 1 ? h("div", { class: "row dim", style: { gridColumn: "1 / -1", fontSize: "13px" } }, t("Главная метрика:"),
+      h("select", { class: "input", style: { padding: "3px 8px" }, "aria-label": t("Главная метрика"),
         onchange: async (e) => { try { run = await api.patchRun(id, { main_metric: e.target.value }); renderTiles(); } catch (err) { toast(err.message, "crit"); } } },
         options.map((k) => h("option", { value: k, selected: k === s.main_key }, k)))) : null);
   }
 
   function chartOptions() {
     const time = view.axis === "time";
-    return { smooth: view.smooth, log: view.log, sync: time ? "run-time" : "run-step", xTitle: time ? "время" : "шаг", xFormat: time ? fmtClock : fmtAxis, timeAxis: time };
+    return { smooth: view.smooth, log: view.log, sync: time ? "run-time" : "run-step", xTitle: time ? t("время") : t("шаг"), xFormat: time ? fmtClock : fmtAxis, timeAxis: time };
   }
 
   function groupSeries(group) {
@@ -185,7 +186,7 @@ export function mount(root, ctx) {
       if (key === run.summary.main_key) groups.get(info.group).main = true;
     }
     if (!groups.size && !cards.size) {
-      clear(chartsBox, h("div", { class: "card empty" }, h("h3", null, "Графиков пока нет"), h("div", null, "Как только обучение запишет первые метрики, они появятся здесь.")));
+      clear(chartsBox, h("div", { class: "card empty" }, h("h3", null, t("Графиков пока нет")), h("div", null, t("Как только обучение запишет первые метрики, они появятся здесь."))));
       return;
     }
     for (const [kind, title, lead] of SECTIONS) {
@@ -201,7 +202,7 @@ export function mount(root, ctx) {
       }
       for (const [group, g] of mine) {
         if (!cards.has(group)) {
-          const what = g.info.hint ? (g.info.title === g.info.label ? "" : g.info.title + ". ") + g.info.hint.replace(/ Считается на .*$/, "") : "";
+          const what = g.info.hint ? (g.info.title === g.info.label ? "" : g.info.title + ". ") + g.info.hint : "";
           const card = new ChartCard({ title: g.info.label, what, chart: chartOptions() });
           cards.set(group, card);
           grids.get(kind).append(card.el);
@@ -221,7 +222,7 @@ export function mount(root, ctx) {
 
   function hwCard(key, title, what, chart) {
     if (!hwCards.has(key)) {
-      const card = new ChartCard({ title, what, chart: { sync: "run-time", xTitle: "время", xFormat: fmtClock, timeAxis: true, height: 180, ...chart } });
+      const card = new ChartCard({ title, what, chart: { sync: "run-time", xTitle: t("время"), xFormat: fmtClock, timeAxis: true, height: 180, ...chart } });
       hwCards.set(key, card);
       hwBox.querySelector(".grid.charts").append(card.el);
     }
@@ -234,9 +235,9 @@ export function mount(root, ctx) {
       if (hwCards.size) return;
       const cmd = `python -m monitor --server ${location.origin}`;
       clear(hwBox, h("div", { class: "note-box", style: { marginTop: "12px" } },
-        run.source !== "sdk" && run.source !== "demo" ? "Для импортированных запусков показаний железа нет — они собираются только во время обучения."
-          : !run.host ? "Запуск не сообщил, на какой машине он идёт."
-          : `Нет показаний с машины «${run.host}». Если обучение идёт на другом компьютере, запустите там монитор из папки MLogger: ${cmd}`));
+        run.source !== "sdk" && run.source !== "demo" ? t("Для импортированных запусков показаний железа нет — они собираются только во время обучения.")
+          : !run.host ? t("Запуск не сообщил, на какой машине он идёт.")
+          : t("Нет показаний с машины «{0}». Если обучение идёт на другом компьютере, запустите там монитор из папки MLogger: {1}", [run.host, cmd])));
       return;
     }
     if (!hwBox.querySelector(".grid.charts")) {
@@ -246,29 +247,29 @@ export function mount(root, ctx) {
     if (hw) {
       clear(hwBox.querySelector(".grid.tiles"), hw.gpus.map((g) => h("div", { class: "card tile" },
         h("div", { class: "label" }, h("span", { class: "vendor" }, g.vendor || "GPU"), g.name),
-        h("div", { class: "value" }, g.util_avg == null ? "—" : `${Math.round(g.util_avg)}%`, h("small", null, "средняя загрузка")),
+        h("div", { class: "value" }, g.util_avg == null ? "—" : `${Math.round(g.util_avg)}%`, h("small", null, t("средняя загрузка"))),
         h("div", { class: "note" }, [
-          g.mem_max != null && g.mem_total ? `память до ${fmtGb(g.mem_max)} из ${fmtGb(g.mem_total)} ГБ` : null,
-          g.temp_max != null ? `до ${Math.round(g.temp_max)} °C` : null,
-          g.power_avg != null ? `≈ ${Math.round(g.power_avg)} Вт` : null].filter(Boolean).join(" · ") || "нет данных о памяти и температуре"))));
+          g.mem_max != null && g.mem_total ? t("память до {0} из {1} ГБ", [fmtGb(g.mem_max), fmtGb(g.mem_total)]) : null,
+          g.temp_max != null ? t("до {0} °C", [Math.round(g.temp_max)]) : null,
+          g.power_avg != null ? t("≈ {0} Вт", [Math.round(g.power_avg)]) : null].filter(Boolean).join(" · ") || t("нет данных о памяти и температуре")))));
     }
     const gpuSeries = (field, scale = 1) => sys.gpus.slice(0, 8).map((g, i) => ({
       name: sys.gpus.length > 1 ? `GPU ${i} · ${g.name}` : g.name, color: SLOTS[i], x: sys.t, y: g[field].map((v) => (v == null ? null : v * scale)) }));
     const pctFmt = (v) => `${Math.round(v)}%`;
     if (sys.gpus.length) {
-      hwCard("util", "Загрузка видеокарты, %", "Хорошо, когда во время обучения карта занята на 80–100%. Провалы — это ожидание данных.",
+      hwCard("util", t("Загрузка видеокарты, %"), t("Хорошо, когда во время обучения карта занята на 80–100%. Провалы — это ожидание данных."),
         { yMin: 0, yMax: 100, tipFormat: pctFmt, area: true }).setData(gpuSeries("util"));
-      hwCard("mem", "Видеопамять, ГБ", "Сколько памяти карты занято. Упирается в потолок — возможна ошибка Out of Memory.",
-        { yMin: 0, tipFormat: (v) => `${v.toFixed(1)} ГБ`, area: true }).setData(gpuSeries("mem", 1 / 2 ** 30));
+      hwCard("mem", t("Видеопамять, ГБ"), t("Сколько памяти карты занято. Упирается в потолок — возможна ошибка Out of Memory."),
+        { yMin: 0, tipFormat: (v) => t("{0} ГБ", [v.toFixed(1)]), area: true }).setData(gpuSeries("mem", 1 / 2 ** 30));
       if (sys.gpus.some((g) => g.temp.some((v) => v != null))) {
-        hwCard("temp", "Температура видеокарты, °C", "Выше 85 °C карта начинает сбрасывать частоты и работает медленнее.",
+        hwCard("temp", t("Температура видеокарты, °C"), t("Выше 85 °C карта начинает сбрасывать частоты и работает медленнее."),
           { tipFormat: (v) => `${Math.round(v)} °C` }).setData(gpuSeries("temp").filter((s) => s.y.some((v) => v != null)));
       }
     }
-    hwCard("cpu", "Процессор, %", "Загрузка всех ядер. Близко к 100% при простаивающей видеокарте — процессор не успевает готовить данные.",
+    hwCard("cpu", t("Процессор, %"), t("Загрузка всех ядер. Близко к 100% при простаивающей видеокарте — процессор не успевает готовить данные."),
       { yMin: 0, yMax: 100, tipFormat: pctFmt, area: true }).setData([{ name: "CPU", color: SLOTS[0], x: sys.t, y: sys.cpu }]);
-    hwCard("ram", "Оперативная память, ГБ", sys.ram_total ? `Всего в системе ${fmtGb(sys.ram_total)} ГБ.` : "",
-      { yMin: 0, tipFormat: (v) => `${v.toFixed(1)} ГБ`, area: true }).setData([{ name: "RAM", color: SLOTS[0], x: sys.t, y: sys.ram.map((v) => (v == null ? null : v / 2 ** 30)) }]);
+    hwCard("ram", t("Оперативная память, ГБ"), sys.ram_total ? t("Всего в системе {0} ГБ.", [fmtGb(sys.ram_total)]) : "",
+      { yMin: 0, tipFormat: (v) => t("{0} ГБ", [v.toFixed(1)]), area: true }).setData([{ name: "RAM", color: SLOTS[0], x: sys.t, y: sys.ram.map((v) => (v == null ? null : v / 2 ** 30)) }]);
   }
 
   function kv(title, rows, empty) {
@@ -280,14 +281,14 @@ export function mount(root, ctx) {
   function renderParams() {
     const env = run.env || {};
     const envRows = [
-      ["Компьютер", run.host], ["Python", env.python], ["Система", env.platform], ["Скрипт", env.script], ["Git-коммит", env.git],
-      ["Ускоритель", env.accelerator], ["Устройства", (env.devices || []).join(", ") || null],
+      [t("Компьютер"), run.host], ["Python", env.python], [t("Система"), env.platform], [t("Скрипт"), env.script], [t("Git-коммит"), env.git],
+      [t("Ускоритель"), env.accelerator], [t("Устройства"), (env.devices || []).join(", ") || null],
       ...Object.entries(env.frameworks || {}).map(([k, v]) => [k, v]),
-      ["Импортировано из", env.imported_from], ["ID запуска", run.id],
+      [t("Импортировано из"), env.imported_from], [t("ID запуска"), run.id],
     ].filter(([, v]) => v != null && v !== "");
     clear(paramsBox,
-      kv("Параметры обучения", Object.entries(flatten(run.config)), "Параметры не переданы. Добавьте config={...} в mlogger.init()."),
-      kv("Окружение", envRows, "Нет данных."));
+      kv(t("Параметры обучения"), Object.entries(flatten(run.config)), t("Параметры не переданы. Добавьте config={...} в mlogger.init().")),
+      kv(t("Окружение"), envRows, t("Нет данных.")));
   }
 
   async function refresh() {
@@ -296,7 +297,7 @@ export function mount(root, ctx) {
     if (finalPass && built) return;
     let fresh;
     try { fresh = await api.run(id); } catch (e) {
-      if (!run) clear(head, h("div", { class: "card empty" }, h("h3", null, "Запуск не найден"), h("div", null, "Возможно, его удалили."), h("div", { class: "row" }, h("a", { class: "btn", href: "#/runs" }, "К списку запусков"))));
+      if (!run) clear(head, h("div", { class: "card empty" }, h("h3", null, t("Запуск не найден")), h("div", null, t("Возможно, его удалили.")), h("div", { class: "row" }, h("a", { class: "btn", href: "#/runs" }, t("К списку запусков")))));
       throw e;
     }
     const first = !run;

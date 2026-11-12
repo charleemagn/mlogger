@@ -50,9 +50,10 @@ The interface is plain JavaScript without a build step: edit a file in `ui/`, re
 - `monitor/` — the hardware monitor for GPUs, CPU and memory
 - `diagnostics/` — the training diagnosis and the metric glossary
 - `importers/` — importers for Ultralytics, TensorBoard and MLflow logs
+- `i18n/` — helpers for the two interface languages, Russian and English
 - `demo/` — runnable examples
 - `test/` — tests
-- `readme_files/` — images for the README and its Russian version
+- `readme_files/` — images for the README; `readme_files/ru/` holds the Russian README and its screenshots
 
 ## 🚀 Run MLogger
 
@@ -84,6 +85,17 @@ A few ground rules for the code:
 - **Keep Python 3.9 compatible.**
 - **The client must never break training.** Network errors are swallowed, work happens off the main thread.
 - **Interface text is user-facing.** Write it for someone who is not an ML engineer.
+
+## 🌍 Languages
+
+MLogger speaks Russian and English, and every user-facing text must exist in both.
+
+- **Interface (`ui/js/`)** — write the Russian text in the code and wrap it in `t("...")`; add the English translation to `ui/js/lang/en.js` under the same key. Values go into the text through numbered placeholders: `t("Удалить запуск «{0}»?", [name])`.
+- **Server, diagnosis and glossary** — build texts with `T("русский", "English")` from the `i18n` package. The API returns them in the language of the request.
+- **Command line** — `start.py` and `monitor/__main__.py` use a local `_("русский", "English")` helper.
+- **README** — `README.md` is the English version and `readme_files/ru/README.md` the Russian one; keep them in sync.
+
+The tests fail if an interface string has no English translation or if Russian text is left outside `t()`.
 
 ## 📮 Submitting PRs
 

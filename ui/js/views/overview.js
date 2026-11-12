@@ -2,6 +2,7 @@ import { h, clear, icon, toast, fmtNum, fmtDur, plural, healthColor, codeBlock }
 import { api } from "../api.js";
 import { gpuHead, gpuMeters, runCard, mainMetric, importDialog, quickstartCode } from "../parts.js";
 import { meter } from "../chart.js";
+import { t } from "../i18n.js";
 
 const LEVEL_COLOR = { ok: "var(--good)", info: "var(--neutral)", warn: "var(--warning)", crit: "var(--critical)" };
 
@@ -12,12 +13,12 @@ export function mount(root, ctx) {
   const actions = h("div", { class: "actions" });
   root.append(
     h("div", { class: "page-head" },
-      h("div", null, h("h1", null, "Обзор"), h("div", { class: "sub" }, "Что происходит с обучением прямо сейчас и чем закончились прошлые запуски")),
+      h("div", null, h("h1", null, t("Обзор")), h("div", { class: "sub" }, t("Что происходит с обучением прямо сейчас и чем закончились прошлые запуски"))),
       actions),
     body);
 
   async function loadDemo() {
-    try { await api.demo(); toast("Демо-запуски добавлены — один из них обучается прямо сейчас", "ok"); runsSig = ""; await refresh(); }
+    try { await api.demo(); toast(t("Демо-запуски добавлены — один из них обучается прямо сейчас"), "ok"); runsSig = ""; await refresh(); }
     catch (e) { toast(e.message, "crit"); }
   }
 
@@ -26,22 +27,22 @@ export function mount(root, ctx) {
     return [
       h("div", { class: "card hero" },
         h("div", null,
-          h("h1", null, "Следите за обучением моделей, не выходя из браузера"),
-          h("p", null, "MLogger собирает метрики обучения, следит за видеокартами и объясняет простыми словами, что происходит: модель учится, переобучается или пора останавливать. Всё хранится на вашем компьютере."),
+          h("h1", null, t("Следите за обучением моделей, не выходя из браузера")),
+          h("p", null, t("MLogger собирает метрики обучения, следит за видеокартами и объясняет простыми словами, что происходит: модель учится, переобучается или пора останавливать. Всё хранится на вашем компьютере.")),
           h("div", { class: "row" },
-            h("button", { class: "btn primary", onclick: loadDemo }, icon("spark"), "Посмотреть на демо-данных"),
-            h("button", { class: "btn", onclick: () => importDialog(() => refresh()) }, icon("upload"), "Импортировать свои логи"))),
+            h("button", { class: "btn primary", onclick: loadDemo }, icon("spark"), t("Посмотреть на демо-данных")),
+            h("button", { class: "btn", onclick: () => importDialog(() => refresh()) }, icon("upload"), t("Импортировать свои логи")))),
         h("img", { src: "/assets/logo.png", alt: "" })),
       h("div", { class: "section" },
-        h("h2", null, "Как подключить своё обучение"),
+        h("h2", null, t("Как подключить своё обучение")),
         h("div", { class: "card steps" },
-          h("div", { class: "step" }, h("div", null, h("h3", null, "Установите клиент в окружение, где идёт обучение"),
-            h("p", null, "Это маленький пакет без зависимостей."), codeBlock(code.install))),
-          h("div", { class: "step" }, h("div", null, h("h3", null, "Добавьте три строки в код обучения"),
-            h("p", null, "Работает с любым фреймворком: PyTorch, TensorFlow, JAX, scikit-learn. Для Keras, Lightning, YOLO, Transformers, XGBoost и LightGBM есть готовые обёртки — см. «Подключение»."),
+          h("div", { class: "step" }, h("div", null, h("h3", null, t("Установите клиент в окружение, где идёт обучение")),
+            h("p", null, t("Это маленький пакет без зависимостей.")), codeBlock(code.install))),
+          h("div", { class: "step" }, h("div", null, h("h3", null, t("Добавьте три строки в код обучения")),
+            h("p", null, t("Работает с любым фреймворком: PyTorch, TensorFlow, JAX, scikit-learn. Для Keras, Lightning, YOLO, Transformers, XGBoost и LightGBM есть готовые обёртки — см. «Подключение».")),
             codeBlock(code.basic))),
-          h("div", { class: "step" }, h("div", null, h("h3", null, "Запустите обучение"),
-            h("p", null, "Запуск появится здесь сам, графики обновляются на лету."))))),
+          h("div", { class: "step" }, h("div", null, h("h3", null, t("Запустите обучение")),
+            h("p", null, t("Запуск появится здесь сам, графики обновляются на лету.")))))),
     ];
   }
 
@@ -61,9 +62,9 @@ export function mount(root, ctx) {
     const shown = top.slice(0, 8);
     const max = Math.max(...shown.map((t) => Math.abs(t.value))) || 1;
     return h("div", { class: "card" },
-      h("h3", null, `Рейтинг запусков по ${top[0].key}`),
+      h("h3", null, t("Рейтинг запусков по {0}", [top[0].key])),
       h("div", { class: "dim", style: { margin: "2px 0 14px" } },
-        `Проект «${top[0].run.project}» · ${top[0].dir === "min" ? "меньше — лучше" : "больше — лучше"} · лучшее значение за запуск`),
+        t("Проект «{0}» · {1} · лучшее значение за запуск", [top[0].run.project, top[0].dir === "min" ? t("меньше — лучше") : t("больше — лучше")])),
       h("div", { class: "bars" }, shown.map((t, i) => [
         h("a", { class: "name", href: `#/run/${t.run.id}`, title: t.run.name }, t.run.name),
         h("div", { class: "track" },
@@ -77,8 +78,8 @@ export function mount(root, ctx) {
     const levels = ["ok", "info", "warn", "crit"].map((level) => ({ level, count: ov.verdicts.filter((v) => v.level === level).reduce((a, v) => a + v.count, 0) })).filter((l) => l.count);
     const sorted = [...ov.verdicts].sort((a, b) => ["ok", "info", "warn", "crit"].indexOf(a.level) - ["ok", "info", "warn", "crit"].indexOf(b.level));
     return h("div", { class: "card" },
-      h("h3", null, "Чем закончились запуски"),
-      h("div", { class: "dim", style: { margin: "2px 0 14px" } }, "Автоматический диагноз по форме кривых обучения"),
+      h("h3", null, t("Чем закончились запуски")),
+      h("div", { class: "dim", style: { margin: "2px 0 14px" } }, t("Автоматический диагноз по форме кривых обучения")),
       h("div", { class: "segbar", role: "img", "aria-label": sorted.map((v) => `${v.label}: ${v.count}`).join(", ") },
         levels.map((l) => h("i", { style: { width: `${(l.count / total) * 100}%`, background: LEVEL_COLOR[l.level] } }))),
       h("div", { class: "legend", style: { marginTop: "12px" } }, sorted.map((v) =>
@@ -87,33 +88,33 @@ export function mount(root, ctx) {
 
   function insightsCard(ov) {
     return h("div", { class: "card" },
-      h("h3", { style: { marginBottom: "12px" } }, "Выводы"),
+      h("h3", { style: { marginBottom: "12px" } }, t("Выводы")),
       ov.insights.length
         ? h("div", { class: "insights" }, ov.insights.map((i) => h("div", { class: "insight" },
           h("span", { class: `lv-${i.level}` }, icon(i.level)), h("p", null, i.text),
-          i.run ? h("a", { href: `#/run/${i.run}` }, "Открыть") : h("span"))))
-        : h("div", { class: "muted" }, "Выводы появятся, когда накопится несколько точек метрик."));
+          i.run ? h("a", { href: `#/run/${i.run}` }, t("Открыть")) : h("span"))))
+        : h("div", { class: "muted" }, t("Выводы появятся, когда накопится несколько точек метрик.")));
   }
 
   function renderRuns(ov, runs) {
     const demo = runs.some((r) => r.source === "demo");
     clear(actions,
-      demo ? h("button", { class: "btn ghost", onclick: async () => { await api.deleteDemo(); toast("Демо-данные удалены", "ok"); runsSig = ""; refresh(); } }, icon("trash", "sm"), "Убрать демо-данные") : null,
-      h("button", { class: "btn", onclick: () => importDialog(() => { runsSig = ""; refresh(); }) }, icon("upload", "sm"), "Импорт логов"));
+      demo ? h("button", { class: "btn ghost", onclick: async () => { await api.deleteDemo(); toast(t("Демо-данные удалены"), "ok"); runsSig = ""; refresh(); } }, icon("trash", "sm"), t("Убрать демо-данные")) : null,
+      h("button", { class: "btn", onclick: () => importDialog(() => { runsSig = ""; refresh(); }) }, icon("upload", "sm"), t("Импорт логов")));
     if (!runs.length) return clear(body, welcome());
 
     const live = runs.filter((r) => r.status === "running");
     const recent = [...live, ...runs.filter((r) => r.status !== "running")].slice(0, Math.max(5, live.length));
     clear(body,
       h("div", { class: "grid tiles" },
-        tile("Сейчас обучается", String(ov.running), ov.running ? "графики обновляются на лету" : "активных запусков нет", ov.running ? h("span", { class: "dot live" }) : null),
-        tile("Всего запусков", String(ov.total), plural(ov.projects.length, "проект", "проекта", "проектов")),
-        tile("Время обучения", fmtDur(ov.train_seconds), "суммарно по всем запускам"),
+        tile(t("Сейчас обучается"), String(ov.running), ov.running ? t("графики обновляются на лету") : t("активных запусков нет"), ov.running ? h("span", { class: "dot live" }) : null),
+        tile(t("Всего запусков"), String(ov.total), plural(ov.projects.length, t("проект"), t("проекта"), t("проектов"))),
+        tile(t("Время обучения"), fmtDur(ov.train_seconds), t("суммарно по всем запускам")),
         healthTile(ov.health_avg)),
       h("div", { class: "grid split", style: { marginTop: "14px" } }, insightsCard(ov), h("div", { class: "grid" }, verdictCard(ov), systemBox)),
       h("div", { class: "section" },
-        h("div", { class: "row" }, h("h2", null, live.length ? "Идут сейчас и последние" : "Последние запуски"), h("span", { class: "spacer" }),
-          h("a", { class: "btn ghost sm", href: "#/runs" }, "Все запуски")),
+        h("div", { class: "row" }, h("h2", null, live.length ? t("Идут сейчас и последние") : t("Последние запуски")), h("span", { class: "spacer" }),
+          h("a", { class: "btn ghost sm", href: "#/runs" }, t("Все запуски"))),
         h("div", { class: "card", style: { marginTop: "12px" } }, recent.map(runCard))),
       h("div", { class: "section" }, ranking(runs)));
   }
@@ -125,28 +126,28 @@ export function mount(root, ctx) {
   function healthTile(avg) {
     const score = avg == null ? null : Math.round(avg);
     return h("div", { class: "card tile" },
-      h("div", { class: "label" }, "Средний индекс здоровья"),
-      h("div", { class: "value" }, score == null ? "—" : String(score), h("small", null, "из 100")),
+      h("div", { class: "label" }, t("Средний индекс здоровья")),
+      h("div", { class: "value" }, score == null ? "—" : String(score), h("small", null, t("из 100"))),
       h("div", { class: "progress", style: { margin: "6px 0 4px", background: `color-mix(in srgb, ${healthColor(score)} 20%, transparent)` } },
         h("i", { style: { width: `${score || 0}%`, background: healthColor(score) } })),
-      h("div", { class: "note" }, "100 — обучение без замечаний"));
+      h("div", { class: "note" }, t("100 — обучение без замечаний")));
   }
 
   function renderSystem(sys) {
     const host = sys.hosts[0];
     if (!host) {
-      return clear(systemBox, h("div", { class: "card" }, h("h3", null, "Железо сейчас"),
-        h("div", { class: "muted", style: { marginTop: "8px" } }, "Монитор ещё собирает первые показания…")));
+      return clear(systemBox, h("div", { class: "card" }, h("h3", null, t("Железо сейчас")),
+        h("div", { class: "muted", style: { marginTop: "8px" } }, t("Монитор ещё собирает первые показания…"))));
     }
     const s = host.latest;
     clear(systemBox, h("div", { class: "card" },
-      h("div", { class: "row", style: { marginBottom: "12px" } }, h("h3", null, "Железо сейчас"), h("span", { class: "muted" }, host.host),
-        h("span", { class: "spacer" }), h("a", { class: "btn ghost sm", href: "#/hardware" }, "Подробнее")),
+      h("div", { class: "row", style: { marginBottom: "12px" } }, h("h3", null, t("Железо сейчас")), h("span", { class: "muted" }, host.host),
+        h("span", { class: "spacer" }), h("a", { class: "btn ghost sm", href: "#/hardware" }, t("Подробнее"))),
       h("div", { class: "stack" },
-        s.gpus.length ? s.gpus.map((g) => h("div", null, gpuHead(g), gpuMeters(g, { compact: true }))) : h("div", { class: "muted" }, "Видеокарты не обнаружены."),
+        s.gpus.length ? s.gpus.map((g) => h("div", null, gpuHead(g), gpuMeters(g, { compact: true }))) : h("div", { class: "muted" }, t("Видеокарты не обнаружены.")),
         h("div", { class: "stack", style: { borderTop: "1px solid var(--border)", paddingTop: "10px" } },
-          meter("Процессор", s.cpu == null ? null : s.cpu / 100, s.cpu == null ? "—" : `${Math.round(s.cpu)}%`),
-          meter("Память", s.ram_total ? s.ram_used / s.ram_total : null, s.ram_total ? `${(s.ram_used / 2 ** 30).toFixed(1)} / ${(s.ram_total / 2 ** 30).toFixed(1)} ГБ` : "—", { warnAt: 90, critAt: 96 })))));
+          meter(t("Процессор"), s.cpu == null ? null : s.cpu / 100, s.cpu == null ? "—" : `${Math.round(s.cpu)}%`),
+          meter(t("Память"), s.ram_total ? s.ram_used / s.ram_total : null, s.ram_total ? t("{0} / {1} ГБ", [(s.ram_used / 2 ** 30).toFixed(1), (s.ram_total / 2 ** 30).toFixed(1)]) : "—", { warnAt: 90, critAt: 96 })))));
   }
 
   async function refresh() {

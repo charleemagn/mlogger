@@ -8,6 +8,7 @@ from diagnostics import analyze, describe, pick_main
 
 SPARK_POINTS = 48
 ANALYZE_POINTS = 2000
+SUMMARY_VERSION = 2
 
 
 def bucket_mean(values: list, n: int) -> list:
@@ -168,4 +169,4 @@ def build_summary(db, run: dict) -> dict:
 
     return {"keys": keys, "main_key": main_key, "max_step": max_step, "last_ts": last_ts,
             "duration": max(0.0, end - run["created_at"]), "progress": progress, "eta": eta,
-            "hw": hw, "diagnosis": diagnosis, "built_at": time.time()}
+            "hw": hw, "diagnosis": diagnosis, "built_at": time.time(), "version": SUMMARY_VERSION}

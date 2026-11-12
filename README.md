@@ -6,6 +6,12 @@
 
 <div align="center">
 
+**English** | [Русский](readme_files/ru/README.md)
+
+</div>
+
+<div align="center">
+
 [![mlogger-tests](https://github.com/charleemagn/mlogger/actions/workflows/test-python.yml/badge.svg)](https://github.com/charleemagn/mlogger/actions/workflows/test-python.yml)
 [![Python](https://img.shields.io/badge/python-3.9%2B-3776ab)](https://www.python.org/downloads/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-2aa2b9)](#installation)
@@ -16,7 +22,6 @@
 | [Integrations](#framework-integrations)
 | [Examples](demo/)
 | [Contributing](CONTRIBUTING.md)
-| [Русская версия](readme_files/README_ru.md)
 
 </div>
 
@@ -46,7 +51,7 @@ Then start it:
 Your browser opens the interface at <http://127.0.0.1:8765>.
 
 > [!TIP]
-> No training script at hand? Click **«Посмотреть на демо-данных»** on the first screen. It adds six demo runs that cover the typical scenarios — one of them keeps training live while you watch.
+> No training script at hand? Click **View demo data** on the first screen. It adds six demo runs that cover the typical scenarios — one of them keeps training live while you watch.
 
 ### Tracking Your First Run
 
@@ -134,6 +139,10 @@ No code changes needed if you already have logs. MLogger reads Ultralytics `resu
 python start.py import path/to/runs/detect/train
 ```
 
+#### English and Russian
+
+The interface speaks English and Russian. It starts in the language of your browser, and the **RU / EN** switch at the bottom of the sidebar changes it at any time — the diagnosis, the metric explanations and the error messages switch together with the rest. Console messages follow the system language; set `MLOGGER_LANG=en` or `MLOGGER_LANG=ru` to choose explicitly.
+
 #### Training on another machine
 
 Start the server with `python start.py --host 0.0.0.0`, point the client at it with `mlogger.init(url="http://server:8765")` or the `MLOGGER_URL` environment variable, and run the hardware monitor on the training machine:
@@ -158,7 +167,7 @@ python -m monitor --server http://server:8765
 | XGBoost | `xgb.train(..., callbacks=[MLoggerCallback(project="...")])` from `mlogger.integrations.xgboost` |
 | LightGBM | `lgb.train(..., callbacks=[mlogger_callback(run)])` from `mlogger.integrations.lightgbm` |
 
-Full snippets are on the **«Подключение»** page of the interface. The wrappers are thin; if one misbehaves with your framework version, please [open an issue](https://github.com/charleemagn/mlogger/issues/new/choose).
+Full snippets are on the **Connect** page of the interface. The wrappers are thin; if one misbehaves with your framework version, please [open an issue](https://github.com/charleemagn/mlogger/issues/new/choose).
 
 ### Command Line
 
@@ -181,8 +190,6 @@ Everything is stored in a single SQLite file, `data/mlogger.db`, inside the proj
 - Browse the [examples](demo/): a dependency-free quickstart and a plain PyTorch training loop.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn how the repository is organized and how to run the tests.
 - See [CHANGELOG.md](CHANGELOG.md) for what is in the current release.
-
-The interface is currently available in Russian; this README is also available [in Russian](readme_files/README_ru.md).
 
 ## Questions?
 

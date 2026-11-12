@@ -12,9 +12,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+from i18n import T, join, localize, pick, request_lang
+
 from . import __version__
 from .db import DB
-from .summary import build_summary, series_payload, system_payload
+from .summary import SUMMARY_VERSION, build_summary, series_payload, system_payload
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_DIR = ROOT / "ui"
@@ -23,6 +25,7 @@ SAMPLE_INTERVAL = 2.0
 PERSIST_INTERVAL = 5.0
 RING_SIZE = 450
 SUMMARY_MIN_AGE = 3.0
+NOT_FOUND = T("запуск не найден", "run not found")
 
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg",
@@ -106,7 +109,7 @@ class App:
     def summarized(self, run: dict) -> dict:
         """Запуск с актуальной сводкой; для идущих запусков пересчёт не чаще раза в несколько секунд."""
         summary = run.get("summary")
-        stale = run["dirty"] or not summary
+        stale = run["dirty"] or not summary or summary.get("version") != SUMMARY_VERSION
         if run["status"] == "running" and summary and time.time() - summary.get("built_at", 0) < SUMMARY_MIN_AGE:
             stale = False
         elif run["status"] == "running" and summary and summary.get("hw") is not None:
@@ -127,7 +130,7 @@ class App:
         self.db.mark_stale()
         run = self.db.get_run(run_id)
         if not run:
-            raise HttpError(404, "запуск не найден")
+            raise HttpError(404, NOT_FOUND)
         return self.summarized(run)
 
     def import_path(self, path: str, project: str | None = None) -> list:
@@ -137,10 +140,12 @@ class App:
         try:
             imported = load(target)
         except FileNotFoundError:
-            raise HttpError(400, f"путь не найден: {target}")
+            raise HttpError(400, T(f"путь не найден: {target}", f"path not found: {target}"))
         except ValueError:
-            raise HttpError(400, "в этой папке нет логов Ultralytics (results.csv), TensorBoard (events.out.tfevents.*) "
-                                 "или MLflow (mlruns)")
+            raise HttpError(400, T("в этой папке нет логов Ultralytics (results.csv), TensorBoard "
+                                   "(events.out.tfevents.*) или MLflow (mlruns)",
+                                   "this folder has no Ultralytics (results.csv), TensorBoard "
+                                   "(events.out.tfevents.*) or MLflow (mlruns) logs"))
         created = []
         for item in imported:
             if not item.metrics:
@@ -156,7 +161,8 @@ class App:
             self.db.add_metrics(run_id, item.to_payload())
             created.append(run_id)
         if not created:
-            raise HttpError(400, "логи найдены, но числовых метрик в них нет")
+            raise HttpError(400, T("логи найдены, но числовых метрик в них нет",
+                                   "logs were found, but they contain no numeric metrics"))
         return created
 
 
@@ -171,12 +177,22 @@ def _fmt(v) -> str:
     return f"{v:.4f}".rstrip("0").rstrip(".") if a >= 0.001 or a == 0 else f"{v:.2e}"
 
 
-def _plural(n: int, one: str, few: str, many: str) -> str:
+def _ru(n: int, one: str, few: str, many: str) -> str:
     if n % 10 == 1 and n % 100 != 11:
         return f"{n} {one}"
     if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
         return f"{n} {few}"
     return f"{n} {many}"
+
+
+def _en(n: int, one: str, many: str) -> str:
+    return f"{n} {one if n == 1 else many}"
+
+
+def _names(runs: list) -> dict:
+    shown = runs[:3]
+    return T(", ".join(f"«{r['name']}»" for r in shown) + (" и другие" if len(runs) > 3 else ""),
+             ", ".join(f"“{r['name']}”" for r in shown) + (" and others" if len(runs) > 3 else ""))
 
 
 def insights(runs: list) -> list:
@@ -194,47 +210,61 @@ def insights(runs: list) -> list:
         (project, main), items = max(groups.items(), key=lambda kv: (len(kv[1]), kv[1][0][0]["created_at"]))
         sign = -1 if items[0][1]["direction"] == "min" else 1
         best_run, best = max(items, key=lambda it: sign * it[1]["best"])
-        text = f"Лучший результат в проекте «{project}» — у запуска «{best_run['name']}»: {main} = {_fmt(best['best'])}"
+        value = _fmt(best["best"])
+        text = T(f"Лучший результат в проекте «{project}» — у запуска «{best_run['name']}»: {main} = {value}",
+                 f"The best result in project “{project}” belongs to run “{best_run['name']}”: {main} = {value}")
         if len(items) > 1:
             others = sorted((it[1]["best"] for it in items if it[0] is not best_run), reverse=sign > 0)
-            text += f" (следующий — {_fmt(others[0])})"
-        out.append({"level": "ok", "text": text + ".", "run": best_run["id"]})
+            text = join(text, T(f" (следующий — {_fmt(others[0])})", f" (next best: {_fmt(others[0])})"))
+        out.append({"level": "ok", "text": join(text, "."), "run": best_run["id"]})
 
     by_code: dict = {}
     for r in runs:
         for f in r["summary"]["diagnosis"]["findings"]:
             by_code.setdefault(f["code"], []).append(r)
-    names = lambda rs: ", ".join(f"«{r['name']}»" for r in rs[:3]) + (" и другие" if len(rs) > 3 else "")
 
     if by_code.get("overfit"):
         rs = by_code["overfit"]
-        out.append({"level": "warn", "run": rs[0]["id"],
-                    "text": f"{_plural(len(rs), 'запуск переобучился', 'запуска переобучились', 'запусков переобучились')}: "
-                            f"{names(rs)}. Лучше взять более ранний чекпойнт — он указан в диагнозе запуска."})
+        n = len(rs)
+        out.append({"level": "warn", "run": rs[0]["id"], "text": join(
+            T(_ru(n, "запуск переобучился", "запуска переобучились", "запусков переобучились"),
+              _en(n, "run overfitted", "runs overfitted")), ": ", _names(rs),
+            T(". Лучше взять более ранний чекпойнт — он указан в диагнозе запуска.",
+              ". Take an earlier checkpoint — the run diagnosis names it."))})
     broken = (by_code.get("nan") or []) + [r for r in by_code.get("diverge") or [] if r not in (by_code.get("nan") or [])]
     if broken:
-        out.append({"level": "crit", "run": broken[0]["id"],
-                    "text": f"{_plural(len(broken), 'запуск развалился', 'запуска развалились', 'запусков развалились')} "
-                            f"(NaN или рост loss): {names(broken)}. Обычно причина — слишком большой learning rate."})
+        n = len(broken)
+        out.append({"level": "crit", "run": broken[0]["id"], "text": join(
+            T(_ru(n, "запуск развалился", "запуска развалились", "запусков развалились") + " (NaN или рост loss): ",
+              _en(n, "run blew up", "runs blew up") + " (NaN or rising loss): "), _names(broken),
+            T(". Обычно причина — слишком большой learning rate.",
+              ". The usual cause is a learning rate that is too high."))})
     if by_code.get("gpu_low"):
         rs = by_code["gpu_low"]
-        out.append({"level": "warn", "run": rs[0]["id"],
-                    "text": f"В {_plural(len(rs), 'запуске', 'запусках', 'запусках')} видеокарта простаивала ({names(rs)}): "
-                            "обучение можно ускорить, если быстрее подавать данные."})
+        n = len(rs)
+        out.append({"level": "warn", "run": rs[0]["id"], "text": join(
+            T(f"В {_ru(n, 'запуске', 'запусках', 'запусках')} видеокарта простаивала (",
+              f"The GPU sat idle in {_en(n, 'run', 'runs')} ("), _names(rs),
+            T("): обучение можно ускорить, если быстрее подавать данные.",
+              "): training can be sped up by feeding data faster."))})
     if by_code.get("vram_full"):
         rs = by_code["vram_full"]
-        out.append({"level": "warn", "run": rs[0]["id"],
-                    "text": f"Видеопамять была на пределе: {names(rs)}. Есть риск падения с Out of Memory."})
+        out.append({"level": "warn", "run": rs[0]["id"], "text": join(
+            T("Видеопамять была на пределе: ", "Video memory was at its limit: "), _names(rs),
+            T(". Есть риск падения с Out of Memory.", ". There is a risk of an Out of Memory crash."))})
     live = [r for r in runs if r["status"] == "running"]
     plateau = [r for r in live if r["summary"]["diagnosis"]["verdict"]["code"] == "plateau"]
     if plateau:
-        out.append({"level": "info", "run": plateau[0]["id"],
-                    "text": f"Идущий запуск {names(plateau)} вышел на плато — возможно, его уже можно останавливать."})
+        out.append({"level": "info", "run": plateau[0]["id"], "text": join(
+            T("Идущий запуск ", "The running job "), _names(plateau),
+            T(" вышел на плато — возможно, его уже можно останавливать.",
+              " has reached a plateau — it may be time to stop it."))})
     healthy = [r for r in runs if (r["summary"]["diagnosis"]["health"] or 0) >= 80]
     judged = [r for r in runs if r["summary"]["diagnosis"]["health"] is not None]
     if len(judged) >= 3:
         out.append({"level": "info", "run": None,
-                    "text": f"{len(healthy)} из {len(judged)} оценённых запусков прошли без серьёзных замечаний."})
+                    "text": T(f"{len(healthy)} из {len(judged)} оценённых запусков прошли без серьёзных замечаний.",
+                              f"{len(healthy)} of {len(judged)} rated runs finished without serious findings.")})
     return out
 
 
@@ -255,6 +285,11 @@ def overview(app: App, project: str | None) -> dict:
         "insights": insights(runs),
         "projects": app.db.projects(),
     }
+
+
+def present(run: dict, lang: str) -> dict:
+    """Запуск для ответа API: тексты сводки на языке запроса."""
+    return {**run, "summary": localize(run["summary"], lang)}
 
 
 def slim(run: dict) -> dict:
@@ -287,12 +322,13 @@ def _ping(app, req):
 
 @route("GET", "/api/v1/overview")
 def _overview(app, req):
-    return overview(app, req.query.get("project"))
+    return localize(overview(app, req.query.get("project")), req.lang)
 
 
 @route("GET", "/api/v1/runs")
 def _runs(app, req):
-    return {"runs": [slim(r) for r in app.runs(req.query.get("project"))], "projects": app.db.projects()}
+    return {"runs": [present(slim(r), req.lang) for r in app.runs(req.query.get("project"))],
+            "projects": app.db.projects()}
 
 
 @route("POST", "/api/v1/runs")
@@ -302,20 +338,20 @@ def _create(app, req):
 
 @route("GET", "/api/v1/runs/([\\w\\-]+)")
 def _run(app, req, run_id):
-    return app.run(run_id)
+    return present(app.run(run_id), req.lang)
 
 
 @route("PATCH", "/api/v1/runs/([\\w\\-]+)")
 def _patch(app, req, run_id):
     if not app.db.update_run(run_id, req.body if isinstance(req.body, dict) else {}):
-        raise HttpError(404, "запуск не найден")
-    return app.run(run_id)
+        raise HttpError(404, NOT_FOUND)
+    return present(app.run(run_id), req.lang)
 
 
 @route("DELETE", "/api/v1/runs/([\\w\\-]+)")
 def _delete(app, req, run_id):
     if not app.db.delete_run(run_id):
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     return {"ok": True}
 
 
@@ -323,9 +359,10 @@ def _delete(app, req, run_id):
 def _metrics_add(app, req, run_id):
     points = req.body.get("points") if isinstance(req.body, dict) else req.body
     if not isinstance(points, list):
-        raise HttpError(400, "ожидается список точек [{key, step, value, ts}]")
+        raise HttpError(400, T("ожидается список точек [{key, step, value, ts}]",
+                               "expected a list of points [{key, step, value, ts}]"))
     if not app.db.heartbeat(run_id):
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     return {"saved": app.db.add_metrics(run_id, points)}
 
 
@@ -333,7 +370,7 @@ def _metrics_add(app, req, run_id):
 def _metrics_get(app, req, run_id):
     run = app.db.get_run(run_id)
     if not run:
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     keys = [k for k in req.query.get("keys", "").split(",") if k] or None
     limit = max(50, min(5000, int(req.query.get("max_points", 800))))
     series = app.db.series(run_id, keys)
@@ -344,7 +381,7 @@ def _metrics_get(app, req, run_id):
 def _run_system(app, req, run_id):
     run = app.db.get_run(run_id)
     if not run:
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     if not run.get("host"):
         return {"host": None, "system": None}
     end = run.get("finished_at") or time.time()
@@ -355,7 +392,7 @@ def _run_system(app, req, run_id):
 @route("POST", "/api/v1/runs/([\\w\\-]+)/heartbeat")
 def _heartbeat(app, req, run_id):
     if not app.db.heartbeat(run_id, req.body.get("env") if isinstance(req.body, dict) else None):
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     return {"ok": True}
 
 
@@ -365,7 +402,7 @@ def _finish(app, req, run_id):
     if body.get("env"):
         app.db.heartbeat(run_id, body["env"])
     if not app.db.finish_run(run_id, body.get("status") or "finished", body.get("error")):
-        raise HttpError(404, "запуск не найден")
+        raise HttpError(404, NOT_FOUND)
     return {"ok": True}
 
 
@@ -379,7 +416,7 @@ def _system_add(app, req):
     body = req.body if isinstance(req.body, dict) else {}
     sample, host = body.get("sample"), str(body.get("host") or "")[:100]
     if not host or not isinstance(sample, dict):
-        raise HttpError(400, "ожидается {host, sample}")
+        raise HttpError(400, T("ожидается {host, sample}", "expected {host, sample}"))
     sample["ts"] = time.time()
     sample.setdefault("gpus", [])
     app.system.add(host, sample, body.get("info") if isinstance(body.get("info"), dict) else None)
@@ -390,7 +427,7 @@ def _system_add(app, req):
 def _import(app, req):
     body = req.body if isinstance(req.body, dict) else {}
     if not body.get("path"):
-        raise HttpError(400, "укажите путь к папке с логами")
+        raise HttpError(400, T("укажите путь к папке с логами", "specify the path to the log folder"))
     return {"runs": app.import_path(str(body["path"]), body.get("project") or None)}
 
 
@@ -424,6 +461,8 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def _json(self, status: int, obj):
+        if isinstance(obj, dict) and "error" in obj:
+            obj = {**obj, "error": pick(obj["error"], getattr(self, "lang", "en"))}
         self._send(status, json.dumps(obj, ensure_ascii=False, allow_nan=False, default=str).encode("utf-8"),
                    "application/json; charset=utf-8")
 
@@ -437,21 +476,22 @@ class Handler(BaseHTTPRequestHandler):
     def _handle(self):
         url = urlparse(self.path)
         path = unquote(url.path)
+        self.lang = request_lang(self.headers.get("Accept-Language"))
         length = int(self.headers.get("Content-Length") or 0)
         if length > MAX_BODY:
             self.close_connection = True
-            return self._json(413, {"error": "слишком большой запрос"})
+            return self._json(413, {"error": T("слишком большой запрос", "request is too large")})
         raw = self.rfile.read(length) if length else b""
         if not path.startswith("/api/"):
             if self.command not in ("GET", "HEAD"):
-                return self._json(405, {"error": "метод не поддерживается"})
+                return self._json(405, {"error": T("метод не поддерживается", "method not allowed")})
             return self._static(path)
         allowed = self.server.allowed_hosts
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]").lower()
         if allowed is not None and host not in allowed:
-            return self._json(403, {"error": "неизвестный адрес сервера"})
+            return self._json(403, {"error": T("неизвестный адрес сервера", "unknown server address")})
         if self.command != "GET" and not self._same_origin():
-            return self._json(403, {"error": "запрос с другого сайта отклонён"})
+            return self._json(403, {"error": T("запрос с другого сайта отклонён", "cross-site request rejected")})
         try:
             self.query = {k: v[-1] for k, v in parse_qs(url.query).items()}
             self.body = json.loads(raw.decode("utf-8")) if raw else {}
@@ -459,11 +499,11 @@ class Handler(BaseHTTPRequestHandler):
                 m = pattern.match(path)
                 if m and method == self.command:
                     return self._json(200, fn(self.server.app, self, *m.groups()))
-            self._json(404, {"error": "нет такого адреса"})
+            self._json(404, {"error": T("нет такого адреса", "no such endpoint")})
         except HttpError as e:
             self._json(e.status, {"error": e.message})
         except (ValueError, UnicodeDecodeError) as e:
-            self._json(400, {"error": f"некорректный запрос: {e}"})
+            self._json(400, {"error": T(f"некорректный запрос: {e}", f"bad request: {e}")})
         except Exception as e:
             self._json(500, {"error": f"{type(e).__name__}: {e}"})
 

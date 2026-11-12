@@ -5,6 +5,7 @@
 ### Features
 
 - Local server on the Python standard library and SQLite: start it with `start.bat`, `start.sh` or `python start.py`, no installation required.
+- Two languages, English and Russian: a switch in the interface, bilingual diagnosis, glossary and error messages, console messages in the system language, and a README in both languages.
 - Web interface with an overview, a run list, a run page, run comparison, a hardware page and connection instructions, in light and dark themes.
 - Training diagnosis: a verdict and a health score from 0 to 100 with plain-language findings — overfitting, plateau, divergence, NaN, unstable loss, idle GPU, full video memory, overheating.
 - Metric glossary: every chart explains what the number means and which direction is better.

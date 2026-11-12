@@ -84,7 +84,7 @@ RUNS = [
     ("mobilenet-v3-small", "plateau", 1500, 1.8, 47, "finished", ["mobile"],
      {"model": "mobilenet_v3_small", "optimizer": "AdamW", "lr": 1e-4, "batch_size": 32, "epochs": 60,
       "augment": "flip+crop", "weight_decay": 0.05, "scheduler": "constant", "num_workers": 1}, 34),
-    ("resnet18-cosine-randaug", "best", 1500, 0.9, 41, "finished", ["aug", "кандидат"],
+    ("resnet18-cosine-randaug", "best", 1500, 0.9, 41, "finished", ["aug", "candidate"],
      {"model": "resnet18", "optimizer": "AdamW", "lr": 6e-4, "batch_size": 256, "epochs": 60, "augment": "randaugment",
       "weight_decay": 0.05, "scheduler": "cosine"}, 95),
 ]

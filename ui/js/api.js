@@ -1,17 +1,19 @@
+import { lang, t } from "./i18n.js";
+
 async function request(method, path, body) {
   let res;
   try {
     res = await fetch("/api/v1" + path, {
       method,
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: body === undefined ? { "Accept-Language": lang } : { "Accept-Language": lang, "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error("Сервер MLogger не отвечает. Проверьте, что окно start.bat не закрыто.");
+    throw Object.assign(new Error(t("Сервер MLogger не отвечает. Проверьте, что окно start.bat не закрыто.")), { offline: true });
   }
   let data = null;
   try { data = await res.json(); } catch {}
-  if (!res.ok) throw new Error((data && data.error) || `Ошибка сервера (${res.status})`);
+  if (!res.ok) throw new Error((data && data.error) || t("Ошибка сервера ({0})", [res.status]));
   return data;
 }
 

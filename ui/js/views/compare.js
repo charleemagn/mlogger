@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { ChartCard, SLOTS } from "../chart.js";
 import { selected } from "./runs.js";
 import { emptyIcon } from "../parts.js";
+import { t } from "../i18n.js";
 
 const slotOf = new Map();
 const KIND_ORDER = { score: 0, loss: 1, lr: 2, other: 3, aux: 4 };
@@ -31,12 +32,12 @@ export function mount(root, ctx) {
   let runs = [], metrics = {}, loaded = false, destroyed = false;
 
   root.append(h("div", { class: "page-head" },
-    h("div", null, h("h1", null, "Сравнение запусков"), h("div", { class: "sub" }, "Одни и те же метрики разных запусков на общих графиках"))));
+    h("div", null, h("h1", null, t("Сравнение запусков")), h("div", { class: "sub" }, t("Одни и те же метрики разных запусков на общих графиках")))));
 
   if (ids.length < 2) {
-    root.append(h("div", { class: "card empty" }, emptyIcon("compare"), h("h3", null, "Выберите запуски для сравнения"),
-      h("div", null, "Отметьте галочками два и более запусков в списке и нажмите «Сравнить»."),
-      h("div", { class: "row" }, h("a", { class: "btn primary", href: "#/runs" }, "К списку запусков"))));
+    root.append(h("div", { class: "card empty" }, emptyIcon("compare"), h("h3", null, t("Выберите запуски для сравнения")),
+      h("div", null, t("Отметьте галочками два и более запусков в списке и нажмите «Сравнить».")),
+      h("div", { class: "row" }, h("a", { class: "btn primary", href: "#/runs" }, t("К списку запусков")))));
     return {};
   }
   ids.forEach((id) => selected.add(id));
@@ -48,10 +49,10 @@ export function mount(root, ctx) {
   const smoothInput = h("input", { type: "range", min: 0, max: 0.95, step: 0.05, value: view.smooth, oninput: () => { view.smooth = +smoothInput.value; apply(); } });
   const logInput = h("input", { type: "checkbox", checked: view.log, onchange: () => { view.log = logInput.checked; apply(); } });
   root.append(legend, summary,
-    h("div", { class: "section" }, h("h2", null, "Графики"),
-      h("div", { class: "filters", style: { marginTop: "10px" } }, h("label", null, "Сглаживание", smoothInput), h("label", null, logInput, "Логарифмическая шкала")),
+    h("div", { class: "section" }, h("h2", null, t("Графики")),
+      h("div", { class: "filters", style: { marginTop: "10px" } }, h("label", null, t("Сглаживание"), smoothInput), h("label", null, logInput, t("Логарифмическая шкала"))),
       grid),
-    h("div", { class: "section" }, h("h2", null, "Параметры"), params));
+    h("div", { class: "section" }, h("h2", null, t("Параметры")), params));
 
   function apply() {
     store.set("compare-view", view);
@@ -62,7 +63,7 @@ export function mount(root, ctx) {
 
   function renderLegend() {
     clear(legend, runs.map((r) => h("span", { class: "chip" }, swatch(r), h("a", { href: `#/run/${r.id}` }, r.name),
-      h("button", { class: "btn ghost sm", style: { padding: "0 4px" }, title: "Убрать из сравнения", "aria-label": `Убрать ${r.name} из сравнения`,
+      h("button", { class: "btn ghost sm", style: { padding: "0 4px" }, title: t("Убрать из сравнения"), "aria-label": t("Убрать {0} из сравнения", [r.name]),
         onclick: () => { selected.delete(r.id); ctx.navigate(`#/compare?ids=${ids.filter((x) => x !== r.id).join(",")}`); } }, "×"))));
   }
 
@@ -74,13 +75,13 @@ export function mount(root, ctx) {
     const real = values.filter((v) => v != null);
     const best = real.length ? (dir === "min" ? Math.min(...real) : Math.max(...real)) : null;
     clear(summary, h("div", { class: "card table-card" }, h("table", null,
-      h("thead", null, h("tr", null, h("th", null, "Запуск"), h("th", null, "Статус"), h("th", null, "Диагноз"), h("th", { class: "n" }, "Здоровье"),
-        h("th", { class: "n" }, key ? `${key}, лучшее` : "Главная метрика"), h("th", { class: "n" }, "Шагов"), h("th", { class: "n" }, "Длительность"))),
+      h("thead", null, h("tr", null, h("th", null, t("Запуск")), h("th", null, t("Статус")), h("th", null, t("Диагноз")), h("th", { class: "n" }, t("Здоровье")),
+        h("th", { class: "n" }, key ? t("{0}, лучшее", [key]) : t("Главная метрика")), h("th", { class: "n" }, t("Шагов")), h("th", { class: "n" }, t("Длительность")))),
       h("tbody", null, runs.map((r, i) => h("tr", null,
         h("td", null, h("div", { class: "row", style: { flexWrap: "nowrap" } }, swatch(r), h("a", { class: "name", href: `#/run/${r.id}` }, r.name))),
         h("td", null, statusChip(r.status)), h("td", null, verdictChip(r.summary.diagnosis)),
         h("td", { class: "n" }, r.summary.diagnosis.health ?? "—"),
-        h("td", { class: "n" }, values[i] == null ? "—" : [fmtNum(values[i]), values[i] === best && real.length > 1 ? h("span", { class: "chip ok", style: { marginLeft: "8px" } }, icon("check"), "лучший") : null]),
+        h("td", { class: "n" }, values[i] == null ? "—" : [fmtNum(values[i]), values[i] === best && real.length > 1 ? h("span", { class: "chip ok", style: { marginLeft: "8px" } }, icon("check"), t("лучший")) : null]),
         h("td", { class: "n" }, r.summary.max_step == null ? "—" : fmtNum(r.summary.max_step, 0)),
         h("td", { class: "n nowrap" }, fmtDur(r.summary.duration))))))));
   }
@@ -114,12 +115,12 @@ export function mount(root, ctx) {
     const shown = view.onlyDiff ? rows.filter((r) => r.diff) : rows;
     const toggle = h("input", { type: "checkbox", checked: view.onlyDiff, onchange: () => { view.onlyDiff = toggle.checked; store.set("compare-view", view); renderParams(); } });
     clear(params,
-      h("div", { class: "filters", style: { marginTop: "10px" } }, h("label", null, toggle, "Только различающиеся"),
-        h("span", { class: "muted" }, `${rows.filter((r) => r.diff).length} из ${rows.length} параметров отличаются`)),
-      !names.length ? h("div", { class: "note-box" }, "У этих запусков нет параметров. Передавайте их через config={...} в mlogger.init().")
-        : !shown.length ? h("div", { class: "note-box" }, "Параметры запусков совпадают.")
+      h("div", { class: "filters", style: { marginTop: "10px" } }, h("label", null, toggle, t("Только различающиеся")),
+        h("span", { class: "muted" }, t("{0} из {1} параметров отличаются", [rows.filter((r) => r.diff).length, rows.length]))),
+      !names.length ? h("div", { class: "note-box" }, t("У этих запусков нет параметров. Передавайте их через config={...} в mlogger.init()."))
+        : !shown.length ? h("div", { class: "note-box" }, t("Параметры запусков совпадают."))
         : h("div", { class: "card table-card" }, h("table", null,
-          h("thead", null, h("tr", null, h("th", null, "Параметр"), runs.map((r) => h("th", null, h("div", { class: "row", style: { flexWrap: "nowrap" } }, swatch(r), r.name))))),
+          h("thead", null, h("tr", null, h("th", null, t("Параметр")), runs.map((r) => h("th", null, h("div", { class: "row", style: { flexWrap: "nowrap" } }, swatch(r), r.name))))),
           h("tbody", null, shown.map((row) => h("tr", { class: row.diff && !view.onlyDiff ? "diff" : "" },
             h("td", { class: "dim" }, row.name), row.vals.map((v) => h("td", { class: "mono" }, v == null ? "—" : v.replace(/^"|"$/g, "")))))))));
   }

@@ -6,6 +6,7 @@
 import json
 import os
 import random
+import re
 import sys
 import tempfile
 import threading
@@ -20,6 +21,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "sdk"))
 
 from diagnostics import analyze, describe, pick_main
+from i18n import T, localize, request_lang
 from server import demo
 from server.app import App, Server
 from server.summary import downsample
@@ -98,6 +100,62 @@ class Diagnosis(unittest.TestCase):
             {"name": "GPU A", "util_avg": 31, "mem_max": 23.8 * gb, "mem_total": 24 * gb, "temp_max": 90}]}
         codes = {f["code"] for f in analyze(_series("good"), status="finished", hw=hw)["findings"]}
         self.assertTrue({"gpu_low", "vram_full", "gpu_hot"} <= codes)
+
+
+class Languages(unittest.TestCase):
+    CYRILLIC = re.compile("[\u0400-\u04FF]")
+
+    def test_diagnosis_exists_in_both_languages(self):
+        gb = 2 ** 30
+        hw = {"samples": 50, "ram_max_pct": 99, "gpus": [
+            {"name": "GPU A", "util_avg": 31, "mem_max": 23.8 * gb, "mem_total": 24 * gb, "temp_max": 90}]}
+        for kind, status in (("overfit", "finished"), ("plateau", "running"), ("good", "finished"), ("nan", "running")):
+            result = analyze(_series(kind), status=status, hw=hw)
+            ru, en = localize(result, "ru"), localize(result, "en")
+            for item in (ru, en):
+                self.assertIsInstance(item["verdict"]["label"], str)
+                for finding in item["findings"]:
+                    self.assertIsInstance(finding["title"], str)
+                    self.assertIsInstance(finding["text"], str)
+            self.assertNotRegex(json.dumps(en, ensure_ascii=False), self.CYRILLIC)
+            self.assertRegex(ru["verdict"]["label"], self.CYRILLIC)
+        self.assertEqual(localize(analyze(_series("overfit"), status="finished"), "en")["verdict"]["label"], "Overfitting")
+
+    def test_glossary_exists_in_both_languages(self):
+        for key in ("val/loss", "train_accuracy", "metrics/mAP50-95(B)", "lr", "grad_norm", "test/f1", "epoch"):
+            en = localize(describe(key), "en")
+            self.assertTrue(en["hint"], key)
+            self.assertNotRegex(json.dumps(en, ensure_ascii=False), self.CYRILLIC)
+            self.assertRegex(localize(describe(key), "ru")["hint"], self.CYRILLIC)
+
+    def test_localize_leaves_user_data_alone(self):
+        data = {"config": {"ru": 0.5, "en": 0.5}, "keys": {"ru": 1, "en": 2}, "text": T("да", "yes"), "list": [T("а", "a")]}
+        self.assertEqual(localize(data, "en"), {"config": {"ru": 0.5, "en": 0.5}, "keys": {"ru": 1, "en": 2},
+                                                "text": "yes", "list": ["a"]})
+
+    def test_request_language(self):
+        self.assertEqual(request_lang("ru-RU,ru;q=0.9,en;q=0.8"), "ru")
+        self.assertEqual(request_lang("en-US,en;q=0.9"), "en")
+        self.assertEqual(request_lang("de-DE"), "en")
+        self.assertEqual(request_lang(None), "en")
+
+    def test_interface_dictionary_is_complete(self):
+        ui = ROOT / "ui" / "js"
+        call = re.compile(r'\bt\("((?:[^"\\]|\\.)*)"')
+        used = set()
+        for path in ui.rglob("*.js"):
+            if path.name == "i18n.js" or path.parent.name == "lang":
+                continue
+            source = path.read_text(encoding="utf-8")
+            used.update(json.loads(f'"{m}"') for m in call.findall(source))
+            self.assertNotRegex(call.sub("", source), self.CYRILLIC, f"{path.name}: Russian text outside t()")
+        raw = (ui / "lang" / "en.js").read_text(encoding="utf-8")
+        english = json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
+        self.assertEqual(used - set(english), set(), "strings without an English translation")
+        self.assertEqual(set(english) - used, set(), "translations that are no longer used")
+        for key, value in english.items():
+            self.assertNotRegex(value, self.CYRILLIC, key)
+            self.assertEqual(sorted(set(re.findall(r"\{\d+\}", key))), sorted(set(re.findall(r"\{\d+\}", value))), key)
 
 
 class Downsample(unittest.TestCase):
@@ -218,6 +276,30 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(status, 403)
         status, _ = self.api("/api/v1/runs", "POST", {"name": "ok", "project": "tests"}, {"Origin": self.url})
         self.assertEqual(status, 200)
+
+    def test_api_answers_in_the_requested_language(self):
+        status, run = self.api("/api/v1/runs", "POST", {"name": "lang", "project": "tests"})
+        points = [{"key": "train/loss", "step": i, "value": 2.3} for i in range(40)]
+        self.api(f"/api/v1/runs/{run['id']}/metrics", "POST", points)
+        self.api(f"/api/v1/runs/{run['id']}/finish", "POST", {"status": "finished"})
+        labels = {}
+        for lang in ("ru", "en"):
+            status, data = self.api(f"/api/v1/runs/{run['id']}", headers={"Accept-Language": lang})
+            diagnosis = data["summary"]["diagnosis"]
+            self.assertEqual(diagnosis["verdict"]["code"], "stuck")
+            self.assertIsInstance(diagnosis["findings"][0]["text"], str)
+            self.assertIsInstance(data["summary"]["keys"]["train/loss"]["hint"], str)
+            labels[lang] = diagnosis["verdict"]["label"]
+            status, listing = self.api("/api/v1/runs?project=tests", headers={"Accept-Language": lang})
+            mine = next(r for r in listing["runs"] if r["id"] == run["id"])
+            self.assertEqual(mine["summary"]["diagnosis"]["verdict"]["label"], labels[lang])
+            status, overview = self.api("/api/v1/overview", headers={"Accept-Language": lang})
+            self.assertTrue(all(isinstance(v["label"], str) for v in overview["verdicts"]))
+            self.assertTrue(all(isinstance(i["text"], str) for i in overview["insights"]))
+        self.assertEqual(labels, {"ru": "Не учится", "en": "Not learning"})
+        self.assertEqual(self.api("/api/v1/runs/nope", headers={"Accept-Language": "ru"})[1]["error"], "запуск не найден")
+        self.assertEqual(self.api("/api/v1/runs/nope", headers={"Accept-Language": "en"})[1]["error"], "run not found")
+        self.assertEqual(self.api("/api/v1/runs/nope")[1]["error"], "run not found")
 
     def test_static_files(self):
         with urllib.request.urlopen(self.url + "/") as r:

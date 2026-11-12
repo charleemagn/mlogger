@@ -1,24 +1,25 @@
 import { h, clear, icon, ask, toast, fmtNum, fmtDur, fmtDate, plural, statusChip, verdictChip, tagEl, store } from "../dom.js";
 import { api } from "../api.js";
+import { lang, t } from "../i18n.js";
 import { mainMetric, importDialog, emptyIcon } from "../parts.js";
 import { sparkline } from "../chart.js";
 
 export const selected = new Set();
 
-const STATUSES = [["", "Любой статус"], ["running", "Идёт"], ["finished", "Завершён"], ["failed", "Ошибка"], ["stopped", "Остановлен"], ["crashed", "Прерван"]];
-const SORTS = [["new", "Сначала новые"], ["best", "По главной метрике"], ["health", "По индексу здоровья"]];
+const STATUSES = [["", t("Любой статус")], ["running", t("Идёт")], ["finished", t("Завершён")], ["failed", t("Ошибка")], ["stopped", t("Остановлен")], ["crashed", t("Прерван")]];
+const SORTS = [["new", t("Сначала новые")], ["best", t("По главной метрике")], ["health", t("По индексу здоровья")]];
 
 export function mount(root, ctx) {
   const filter = store.get("runs-filter", { text: "", project: "", status: "", sort: "new" });
   const tags = new Set();
   let runs = [], projects = [], sig = "";
 
-  const search = h("input", { class: "input", type: "search", placeholder: "Поиск по имени, метке, параметру", value: filter.text,
-    style: { width: "280px" }, "aria-label": "Поиск", oninput: () => { filter.text = search.value; changed(); } });
-  const projectSel = h("select", { class: "input", "aria-label": "Проект", onchange: () => { filter.project = projectSel.value; changed(); } });
-  const statusSel = h("select", { class: "input", "aria-label": "Статус", onchange: () => { filter.status = statusSel.value; changed(); } },
+  const search = h("input", { class: "input", type: "search", placeholder: t("Поиск по имени, метке, параметру"), value: filter.text,
+    style: { width: "280px" }, "aria-label": t("Поиск"), oninput: () => { filter.text = search.value; changed(); } });
+  const projectSel = h("select", { class: "input", "aria-label": t("Проект"), onchange: () => { filter.project = projectSel.value; changed(); } });
+  const statusSel = h("select", { class: "input", "aria-label": t("Статус"), onchange: () => { filter.status = statusSel.value; changed(); } },
     STATUSES.map(([v, l]) => h("option", { value: v, selected: v === filter.status }, l)));
-  const sortSel = h("select", { class: "input", "aria-label": "Сортировка", onchange: () => { filter.sort = sortSel.value; changed(); } },
+  const sortSel = h("select", { class: "input", "aria-label": t("Сортировка"), onchange: () => { filter.sort = sortSel.value; changed(); } },
     SORTS.map(([v, l]) => h("option", { value: v, selected: v === filter.sort }, l)));
   const tagRow = h("div", { class: "tags", style: { marginBottom: "12px" } });
   const table = h("div");
@@ -26,8 +27,8 @@ export function mount(root, ctx) {
 
   root.append(
     h("div", { class: "page-head" },
-      h("div", null, h("h1", null, "Запуски"), h("div", { class: "sub" }, "Все обучения: идущие, завершённые и импортированные")),
-      h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => importDialog(() => refresh()) }, icon("upload", "sm"), "Импорт логов"))),
+      h("div", null, h("h1", null, t("Запуски")), h("div", { class: "sub" }, t("Все обучения: идущие, завершённые и импортированные"))),
+      h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => importDialog(() => refresh()) }, icon("upload", "sm"), t("Импорт логов")))),
     h("div", { class: "filters" }, search, projectSel, statusSel, sortSel),
     tagRow, table, bulk);
 
@@ -53,29 +54,29 @@ export function mount(root, ctx) {
   }
 
   function render() {
-    clear(projectSel, h("option", { value: "" }, "Все проекты"), projects.map((p) => h("option", { value: p, selected: p === filter.project }, p)));
-    const allTags = [...new Set(runs.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b, "ru"));
+    clear(projectSel, h("option", { value: "" }, t("Все проекты")), projects.map((p) => h("option", { value: p, selected: p === filter.project }, p)));
+    const allTags = [...new Set(runs.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b, lang));
     for (const t of [...tags]) if (!allTags.includes(t)) tags.delete(t);
-    clear(tagRow, allTags.length ? h("span", { class: "muted", style: { fontSize: "13px" } }, "Метки:") : null,
+    clear(tagRow, allTags.length ? h("span", { class: "muted", style: { fontSize: "13px" } }, t("Метки:")) : null,
       allTags.map((t) => tagEl(t, { pressed: tags.has(t), onClick: () => { tags.has(t) ? tags.delete(t) : tags.add(t); render(); } })));
 
     const rows = visible();
     for (const id of [...selected]) if (!runs.some((r) => r.id === id)) selected.delete(id);
     if (!runs.length) {
-      clear(table, h("div", { class: "card empty" }, emptyIcon("runs"), h("h3", null, "Запусков пока нет"),
-        h("div", null, "Подключите своё обучение или загляните в демо-данные."),
-        h("div", { class: "row" }, h("a", { class: "btn primary", href: "#/connect" }, "Как подключить"),
-          h("button", { class: "btn", onclick: async () => { await api.demo(); refresh(); } }, icon("spark", "sm"), "Демо-данные"))));
+      clear(table, h("div", { class: "card empty" }, emptyIcon("runs"), h("h3", null, t("Запусков пока нет")),
+        h("div", null, t("Подключите своё обучение или загляните в демо-данные.")),
+        h("div", { class: "row" }, h("a", { class: "btn primary", href: "#/connect" }, t("Как подключить")),
+          h("button", { class: "btn", onclick: async () => { await api.demo(); refresh(); } }, icon("spark", "sm"), t("Демо-данные")))));
     } else if (!rows.length) {
-      clear(table, h("div", { class: "card empty" }, h("h3", null, "Ничего не найдено"), h("div", null, "Попробуйте изменить поиск или сбросить фильтры."),
-        h("div", { class: "row" }, h("button", { class: "btn", onclick: () => { Object.assign(filter, { text: "", project: "", status: "" }); search.value = ""; statusSel.value = ""; tags.clear(); changed(); } }, "Сбросить фильтры"))));
+      clear(table, h("div", { class: "card empty" }, h("h3", null, t("Ничего не найдено")), h("div", null, t("Попробуйте изменить поиск или сбросить фильтры.")),
+        h("div", { class: "row" }, h("button", { class: "btn", onclick: () => { Object.assign(filter, { text: "", project: "", status: "" }); search.value = ""; statusSel.value = ""; tags.clear(); changed(); } }, t("Сбросить фильтры")))));
     } else {
       const allOn = rows.every((r) => selected.has(r.id));
       clear(table, h("div", { class: "card table-card" }, h("table", null,
         h("thead", null, h("tr", null,
-          h("th", null, h("input", { type: "checkbox", checked: allOn, "aria-label": "Выбрать все", onchange: (e) => { rows.forEach((r) => (e.target.checked ? selected.add(r.id) : selected.delete(r.id))); render(); } })),
-          h("th", null, "Запуск"), h("th", null, "Статус"), h("th", null, "Диагноз"), h("th", { class: "n" }, "Здоровье"),
-          h("th", null, "Главная метрика"), h("th", null, "Динамика"), h("th", { class: "n" }, "Шагов"), h("th", { class: "n" }, "Длительность"))),
+          h("th", null, h("input", { type: "checkbox", checked: allOn, "aria-label": t("Выбрать все"), onchange: (e) => { rows.forEach((r) => (e.target.checked ? selected.add(r.id) : selected.delete(r.id))); render(); } })),
+          h("th", null, t("Запуск")), h("th", null, t("Статус")), h("th", null, t("Диагноз")), h("th", { class: "n" }, t("Здоровье")),
+          h("th", null, t("Главная метрика")), h("th", null, t("Динамика")), h("th", { class: "n" }, t("Шагов")), h("th", { class: "n" }, t("Длительность")))),
         h("tbody", null, rows.map(row)))));
     }
     renderBulk();
@@ -84,7 +85,7 @@ export function mount(root, ctx) {
   function row(r) {
     const s = r.summary, main = mainMetric(r);
     return h("tr", { class: "click", onclick: (e) => { if (!e.target.closest("input, .tag, a")) ctx.navigate(`#/run/${r.id}`); } },
-      h("td", null, h("input", { type: "checkbox", checked: selected.has(r.id), "aria-label": `Выбрать ${r.name}`,
+      h("td", null, h("input", { type: "checkbox", checked: selected.has(r.id), "aria-label": t("Выбрать {0}", [r.name]),
         onchange: (e) => { e.target.checked ? selected.add(r.id) : selected.delete(r.id); renderBulk(); } })),
       h("td", null,
         h("a", { class: "name", href: `#/run/${r.id}` }, r.name),
@@ -104,20 +105,20 @@ export function mount(root, ctx) {
     bulk.hidden = !selected.size;
     if (!selected.size) return;
     clear(bulk,
-      h("span", null, `Выбрано: ${plural(selected.size, "запуск", "запуска", "запусков")}`), h("span", { class: "spacer" }),
-      h("button", { class: "btn primary", disabled: selected.size < 2, title: selected.size < 2 ? "Выберите хотя бы два запуска" : "",
-        onclick: () => ctx.navigate(`#/compare?ids=${[...selected].slice(0, 8).join(",")}`) }, icon("compare", "sm"), "Сравнить"),
-      h("button", { class: "btn", onclick: removeSelected }, icon("trash", "sm"), "Удалить"),
-      h("button", { class: "btn", onclick: () => { selected.clear(); render(); } }, "Снять выбор"));
+      h("span", null, t("Выбрано: {0}", [plural(selected.size, t("запуск"), t("запуска"), t("запусков"))])), h("span", { class: "spacer" }),
+      h("button", { class: "btn primary", disabled: selected.size < 2, title: selected.size < 2 ? t("Выберите хотя бы два запуска") : "",
+        onclick: () => ctx.navigate(`#/compare?ids=${[...selected].slice(0, 8).join(",")}`) }, icon("compare", "sm"), t("Сравнить")),
+      h("button", { class: "btn", onclick: removeSelected }, icon("trash", "sm"), t("Удалить")),
+      h("button", { class: "btn", onclick: () => { selected.clear(); render(); } }, t("Снять выбор")));
   }
 
   async function removeSelected() {
     const n = selected.size;
-    const ok = await ask({ title: `Удалить ${plural(n, "запуск", "запуска", "запусков")}?`, text: "Метрики и параметры этих запусков будут удалены без возможности восстановления.", ok: "Удалить", danger: true });
+    const ok = await ask({ title: t("Удалить {0}?", [plural(n, t("запуск"), t("запуска"), t("запусков"))]), text: t("Метрики и параметры этих запусков будут удалены без возможности восстановления."), ok: t("Удалить"), danger: true });
     if (!ok) return;
     try {
       await Promise.all([...selected].map((id) => api.deleteRun(id)));
-      toast(`Удалено: ${n}`, "ok");
+      toast(t("Удалено: {0}", [n]), "ok");
     } catch (e) { toast(e.message, "crit"); }
     selected.clear();
     refresh();

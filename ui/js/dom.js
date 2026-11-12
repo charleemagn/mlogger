@@ -1,3 +1,5 @@
+import { lang, locale, t } from "./i18n.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_TAGS = new Set(["svg", "path", "circle", "rect", "line", "polyline", "g"]);
 
@@ -70,9 +72,9 @@ export function fmtNum(v, digits) {
   if (v == null || Number.isNaN(v)) return "—";
   if (v === 0) return "0";
   const a = Math.abs(v);
-  if (digits != null) return v.toLocaleString("ru-RU", { maximumFractionDigits: digits });
-  if (a >= 1e6) return v.toLocaleString("ru-RU", { notation: "compact", maximumFractionDigits: 2 });
-  if (a >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+  if (digits != null) return v.toLocaleString(locale, { maximumFractionDigits: digits });
+  if (a >= 1e6) return v.toLocaleString(locale, { notation: "compact", maximumFractionDigits: 2 });
+  if (a >= 1000) return v.toLocaleString(locale, { maximumFractionDigits: 0 });
   if (a >= 100) return trim(v.toFixed(1));
   if (a >= 1) return trim(v.toFixed(3));
   if (a >= 0.001) return trim(v.toFixed(4));
@@ -83,7 +85,7 @@ const trim = (s) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") :
 
 export function fmtAxis(v) {
   const a = Math.abs(v);
-  if (a >= 1e4) return v.toLocaleString("ru-RU", { notation: "compact", maximumFractionDigits: 1 });
+  if (a >= 1e4) return v.toLocaleString(locale, { notation: "compact", maximumFractionDigits: 1 });
   if (a >= 1 || v === 0) return trim(v.toFixed(a >= 100 ? 0 : 2));
   if (a >= 0.001) return trim(v.toFixed(4));
   return v.toExponential(1).replace("e-", "e−");
@@ -93,10 +95,10 @@ export function fmtDur(sec) {
   if (sec == null) return "—";
   sec = Math.max(0, Math.round(sec));
   const d = Math.floor(sec / 86400), hh = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-  if (d) return `${d} д ${hh} ч`;
-  if (hh) return `${hh} ч ${m} мин`;
-  if (m) return `${m} мин ${s} с`;
-  return `${s} с`;
+  if (d) return t("{0} д {1} ч", [d, hh]);
+  if (hh) return t("{0} ч {1} мин", [hh, m]);
+  if (m) return t("{0} мин {1} с", [m, s]);
+  return t("{0} с", [s]);
 }
 
 export function fmtClock(sec) {
@@ -110,18 +112,19 @@ export function fmtClock(sec) {
 export function fmtDate(ts) {
   if (!ts) return "—";
   const d = new Date(ts * 1000), now = new Date();
-  const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
-  if (days === 0) return `сегодня, ${time}`;
-  if (days === 1) return `вчера, ${time}`;
+  if (days === 0) return t("сегодня, {0}", [time]);
+  if (days === 1) return t("вчера, {0}", [time]);
   const opts = { day: "numeric", month: "short" };
   if (d.getFullYear() !== now.getFullYear()) opts.year = "numeric";
-  return `${d.toLocaleDateString("ru-RU", opts)}, ${time}`;
+  return `${d.toLocaleDateString(locale, opts)}, ${time}`;
 }
 
 export const fmtGb = (bytes) => (bytes == null ? "—" : (bytes / 2 ** 30).toFixed(1));
 
 export function plural(n, one, few, many) {
+  if (lang !== "ru") return `${n} ${n === 1 ? one : many}`;
   const a = n % 10, b = n % 100;
   if (a === 1 && b !== 11) return `${n} ${one}`;
   if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return `${n} ${few}`;
@@ -129,11 +132,11 @@ export function plural(n, one, few, many) {
 }
 
 const STATUS = {
-  running: ["Идёт", "run", null],
-  finished: ["Завершён", "", "check"],
-  failed: ["Ошибка", "crit", "crit"],
-  stopped: ["Остановлен", "", "stop"],
-  crashed: ["Прерван", "warn", "warn"],
+  running: [t("Идёт"), "run", null],
+  finished: [t("Завершён"), "", "check"],
+  failed: [t("Ошибка"), "crit", "crit"],
+  stopped: [t("Остановлен"), "", "stop"],
+  crashed: [t("Прерван"), "warn", "warn"],
 };
 
 export function statusChip(status) {
@@ -143,7 +146,7 @@ export function statusChip(status) {
 
 export function verdictChip(diagnosis) {
   const v = diagnosis.verdict;
-  return h("span", { class: `chip ${v.level}`, title: diagnosis.health != null ? `Индекс здоровья: ${diagnosis.health} из 100` : "" },
+  return h("span", { class: `chip ${v.level}`, title: diagnosis.health != null ? t("Индекс здоровья: {0} из 100", [diagnosis.health]) : "" },
     icon(v.level), v.label);
 }
 
@@ -164,7 +167,7 @@ export function tagEl(tag, { onRemove, onClick, pressed } = {}) {
   return h("span", { class: `tag${onClick ? " pick" : ""}`, style: { "--tag": tagColor(tag) }, onclick: onClick,
     role: onClick ? "button" : null, tabIndex: onClick ? 0 : null, "aria-pressed": onClick ? String(!!pressed) : null,
     onkeydown: onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : null },
-    tag, onRemove ? h("button", { title: "Убрать метку", "aria-label": `Убрать метку ${tag}`, onclick: (e) => { e.stopPropagation(); onRemove(); } }, "×") : null);
+    tag, onRemove ? h("button", { title: t("Убрать метку"), "aria-label": t("Убрать метку {0}", [tag]), onclick: (e) => { e.stopPropagation(); onRemove(); } }, "×") : null);
 }
 
 let toasts;
@@ -176,14 +179,14 @@ export function toast(text, level = "info") {
   setTimeout(() => el.remove(), level === "crit" ? 7000 : 3500);
 }
 
-export function ask({ title, text, fields = [], ok = "Готово", danger = false }) {
+export function ask({ title, text, fields = [], ok = t("Готово"), danger = false }) {
   return new Promise((resolve) => {
     const inputs = fields.map((f) => h("input", { class: "input", name: f.name, placeholder: f.placeholder || "", value: f.value || "" }));
     const form = h("form", { method: "dialog", onsubmit: (e) => { e.preventDefault(); done(Object.fromEntries(inputs.map((i) => [i.name, i.value.trim()]))); } },
       h("h3", null, title), text ? h("p", null, text) : null,
       fields.map((f, i) => h("label", { class: "field" }, h("span", null, f.label), inputs[i])),
       h("div", { class: "row" },
-        h("button", { class: "btn ghost", type: "button", onclick: () => done(null) }, "Отмена"),
+        h("button", { class: "btn ghost", type: "button", onclick: () => done(null) }, t("Отмена")),
         h("button", { class: `btn ${danger ? "danger" : "primary"}`, type: "submit" }, ok)));
     const dialog = h("dialog", { oncancel: () => done(null) }, form);
     function done(value) { dialog.close(); dialog.remove(); resolve(value); }
@@ -195,9 +198,9 @@ export function ask({ title, text, fields = [], ok = "Готово", danger = fa
 
 export function codeBlock(text) {
   const btn = h("button", { type: "button", onclick: async () => {
-    try { await navigator.clipboard.writeText(text); btn.textContent = "Скопировано"; } catch { btn.textContent = "Выделите и скопируйте"; }
-    setTimeout(() => (btn.textContent = "Копировать"), 1600);
-  } }, "Копировать");
+    try { await navigator.clipboard.writeText(text); btn.textContent = t("Скопировано"); } catch { btn.textContent = t("Выделите и скопируйте"); }
+    setTimeout(() => (btn.textContent = t("Копировать")), 1600);
+  } }, t("Копировать"));
   return h("div", { class: "code" }, h("pre", null, text), btn);
 }
 

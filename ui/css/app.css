@@ -100,6 +100,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .side-foot button:hover { background: rgba(255, 255, 255, 0.06); }
 .conn { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.lang { display: inline-flex; align-self: flex-start; margin: 0 12px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; overflow: hidden; }
+.side-foot .lang button { padding: 4px 11px; border-radius: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--side-muted); }
+.side-foot .lang button + button { border-left: 1px solid rgba(255, 255, 255, 0.14); }
+.side-foot .lang button[aria-pressed="true"] { background: rgba(99, 206, 224, 0.16); color: #fff; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral); flex: none; }
 .dot.on { background: var(--good); }
 .dot.off { background: var(--critical); }
@@ -126,6 +130,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .nav a span.label { display: none; }
   .side-foot { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
   .side-foot .conn span, .side-foot button span { display: none; }
+  .lang { margin: 0; align-self: center; }
   .main { padding: 18px 16px 48px; }
 }
 

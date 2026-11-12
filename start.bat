@@ -15,6 +15,12 @@ if not errorlevel 1 (
 )
 
 echo.
+echo   Python 3.9 or newer was not found.
+echo.
+echo   1. Download the installer: https://www.python.org/downloads/
+echo   2. During setup tick "Add python.exe to PATH".
+echo   3. Run start.bat again.
+echo.
 echo   Не найден Python 3.9 или новее.
 echo.
 echo   1. Скачайте установщик: https://www.python.org/downloads/

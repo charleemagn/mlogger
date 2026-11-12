@@ -1,5 +1,6 @@
 import { h, clear, icon, toast } from "./dom.js";
 import { api } from "./api.js";
+import { LANGS, lang, setLang, t } from "./i18n.js";
 import * as overview from "./views/overview.js";
 import * as runs from "./views/runs.js";
 import * as run from "./views/run.js";
@@ -17,19 +18,21 @@ const ROUTES = [
   [/^\/connect$/, connect, "connect"],
 ];
 const NAV = [
-  ["overview", "#/", "Обзор"],
-  ["runs", "#/runs", "Запуски"],
-  ["compare", "#/compare", "Сравнение"],
-  ["hardware", "#/hardware", "Железо"],
-  ["connect", "#/connect", "Подключение"],
+  ["overview", "#/", t("Обзор")],
+  ["runs", "#/runs", t("Запуски")],
+  ["compare", "#/compare", t("Сравнение")],
+  ["hardware", "#/hardware", t("Железо")],
+  ["connect", "#/connect", t("Подключение")],
 ];
 
 const main = h("main", { class: "main" });
 const links = {};
 const runningBadge = h("span", { class: "count", hidden: true });
 const connDot = h("span", { class: "dot on" });
-const connText = h("span", null, "Сервер на связи");
+const connText = h("span", null, t("Сервер на связи"));
 const themeBtn = h("button", { type: "button", onclick: toggleTheme });
+const langSwitch = h("div", { class: "lang", role: "group", "aria-label": "Language" }, LANGS.map(([code, short, name]) =>
+  h("button", { type: "button", title: name, lang: code, "aria-pressed": String(code === lang), onclick: () => setLang(code) }, short)));
 
 function isDark() {
   const forced = document.documentElement.dataset.theme;
@@ -37,7 +40,7 @@ function isDark() {
 }
 
 function paintThemeButton() {
-  clear(themeBtn, icon(isDark() ? "sun" : "moon"), h("span", null, isDark() ? "Светлая тема" : "Тёмная тема"));
+  clear(themeBtn, icon(isDark() ? "sun" : "moon"), h("span", null, isDark() ? t("Светлая тема") : t("Тёмная тема")));
 }
 
 function toggleTheme() {
@@ -55,13 +58,13 @@ document.getElementById("app").append(h("div", { class: "shell" },
       (links[key] = h("a", { href }, icon(key), h("span", { class: "label" }, label), key === "runs" ? runningBadge : null)))),
     h("div", { class: "side-foot" },
       h("div", { class: "conn" }, connDot, connText),
-      themeBtn)),
+      themeBtn, langSwitch)),
   main));
 paintThemeButton();
 
 function setOnline(online) {
   connDot.className = `dot ${online ? "on" : "off"}`;
-  connText.textContent = online ? "Сервер на связи" : "Нет связи с сервером";
+  connText.textContent = online ? t("Сервер на связи") : t("Нет связи с сервером");
 }
 
 const ctx = {
@@ -70,7 +73,7 @@ const ctx = {
   setRunning(n) {
     runningBadge.hidden = !n;
     runningBadge.textContent = String(n);
-    runningBadge.title = `Сейчас обучается: ${n}`;
+    runningBadge.title = t("Сейчас обучается: {0}", [n]);
   },
 };
 
@@ -88,7 +91,7 @@ async function refresh() {
     setOnline(true);
   } catch (e) {
     if (view === current && ++failures === 1) toast(e.message, "crit");
-    setOnline(!/не отвечает/.test(e.message));
+    setOnline(!e.offline);
   } finally {
     busy = false;
   }
@@ -110,7 +113,7 @@ function route() {
     refresh();
     return;
   }
-  clear(main, h("div", { class: "card empty" }, h("h3", null, "Такой страницы нет"), h("a", { class: "btn", href: "#/" }, "На обзор")));
+  clear(main, h("div", { class: "card empty" }, h("h3", null, t("Такой страницы нет")), h("a", { class: "btn", href: "#/" }, t("На обзор"))));
 }
 
 window.addEventListener("hashchange", route);

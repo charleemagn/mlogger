@@ -1,4 +1,5 @@
 import { h, clear, icon, fmtNum, fmtAxis, healthColor } from "./dom.js";
+import { locale, t } from "./i18n.js";
 
 const bus = new EventTarget();
 export const SLOTS = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"];
@@ -21,7 +22,7 @@ function niceTicks(min, max, count, time = false) {
 
 function tickLabels(ticks, step) {
   const top = Math.max(...ticks.map(Math.abs));
-  if (top >= 1e4) return ticks.map((t) => t.toLocaleString("ru-RU", { notation: "compact", maximumFractionDigits: 1 }));
+  if (top >= 1e4) return ticks.map((t) => t.toLocaleString(locale, { notation: "compact", maximumFractionDigits: 1 }));
   const digits = step > 0 ? Math.max(0, Math.ceil(-Math.log10(step) - 1e-9) + (/^2\.5/.test(step.toExponential(2)) ? 1 : 0)) : 2;
   if (digits > 5) return ticks.map((t) => (t === 0 ? "0" : t.toExponential(1).replace("e-", "e−")));
   return ticks.map((t) => t.toFixed(digits));
@@ -51,7 +52,7 @@ export function smooth(values, weight) {
 export class LineChart {
   constructor(host, opts = {}) {
     this.host = host;
-    this.opts = { height: 220, xFormat: fmtAxis, timeAxis: false, tipFormat: fmtNum, xTitle: "шаг", smooth: 0, log: false, ...opts };
+    this.opts = { height: 220, xFormat: fmtAxis, timeAxis: false, tipFormat: fmtNum, xTitle: t("шаг"), smooth: 0, log: false, ...opts };
     this.series = [];
     this.hoverX = null;
     this.showTip = false;
@@ -86,7 +87,7 @@ export class LineChart {
 
   setData(series) {
     this.series = series.map((s) => ({ ...s, shown: smooth(s.y, this.opts.smooth) }));
-    this.canvas.setAttribute("aria-label", "График: " + series.map((s) => s.name).join(", "));
+    this.canvas.setAttribute("aria-label", t("График: ") + series.map((s) => s.name).join(", "));
     this.schedule();
   }
 
@@ -159,7 +160,7 @@ export class LineChart {
     if (!d) {
       ctx.fillStyle = color("--muted");
       ctx.textAlign = "center";
-      ctx.fillText("Пока нет данных", width / 2, height / 2);
+      ctx.fillText(t("Пока нет данных"), width / 2, height / 2);
       return;
     }
     const yScale = niceTicks(d.y0, d.y1, 4);
@@ -324,8 +325,8 @@ export class ChartCard {
     this.last = h("div", { class: "last" });
     this.plot = h("div");
     this.tableWrap = h("div", { class: "table-wrap", hidden: true });
-    this.toggle = h("button", { class: "btn ghost sm", type: "button", "aria-pressed": "false", title: "Показать данные таблицей",
-      onclick: () => this._toggleTable() }, icon("table", "sm"), "Таблица");
+    this.toggle = h("button", { class: "btn ghost sm", type: "button", "aria-pressed": "false", title: t("Показать данные таблицей"),
+      onclick: () => this._toggleTable() }, icon("table", "sm"), t("Таблица"));
     this.el = h("div", { class: "card chart-card" },
       h("div", { class: "chart-head" },
         h("div", null, h("h3", null, title), what ? h("div", { class: "what" }, what) : null),
@@ -391,11 +392,11 @@ export function healthRing(score) {
   const r = 42, len = 2 * Math.PI * r;
   const part = score == null ? 0 : Math.max(0, Math.min(100, score)) / 100;
   return h("div", { class: "ring", style: { "--c": healthColor(score) }, role: "img",
-    "aria-label": score == null ? "Индекс здоровья пока не посчитан" : `Индекс здоровья ${score} из 100` },
+    "aria-label": score == null ? t("Индекс здоровья пока не посчитан") : t("Индекс здоровья {0} из 100", [score]) },
     h("svg", { viewBox: "0 0 100 100" },
       h("circle", { class: "track", cx: 50, cy: 50, r }),
       h("circle", { class: "fill", cx: 50, cy: 50, r, "stroke-dasharray": len, "stroke-dashoffset": len * (1 - part) })),
-    h("div", { class: "center" }, h("b", null, score == null ? "—" : String(score)), h("span", null, "из 100")));
+    h("div", { class: "center" }, h("b", null, score == null ? "—" : String(score)), h("span", null, t("из 100"))));
 }
 
 export function meter(name, part, text, { warnAt = null, critAt = null } = {}) {

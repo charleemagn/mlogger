@@ -8,8 +8,11 @@ metas:  {ключ: describe(ключ)}               — см. glossary.py
 
 Результат:
     {"health": 0..100 | None,
-     "verdict": {"code": "overfit", "label": "Переобучение", "level": "warn"},
+     "verdict": {"code": "overfit", "label": ..., "level": "warn"},
      "findings": [{"level", "code", "title", "text", "key", "step"}, ...]}
+
+label, title и text — тексты сразу на русском и английском (см. i18n.T);
+нужный язык выбирается через i18n.localize(result, "ru" | "en").
 
 Все правила — эвристики по форме кривых. Они подсказывают, куда посмотреть,
 а не заменяют взгляд на графики.
@@ -18,6 +21,8 @@ metas:  {ключ: describe(ключ)}               — см. glossary.py
 from __future__ import annotations
 
 import math
+
+from i18n import T
 
 from .glossary import describe, pick_main
 
@@ -28,10 +33,19 @@ _HW_PENALTY = {"crit": 15, "warn": 10, "info": 3, "ok": 0}
 _ORDER = {"crit": 0, "warn": 1, "info": 2, "ok": 3}
 
 _LABELS = {
-    "nan": "Развалилось (NaN)", "failed": "Ошибка", "diverge": "Расходится", "stuck": "Не учится",
-    "overfit": "Переобучение", "crashed": "Прервано", "plateau": "Плато", "noisy": "Нестабильно",
-    "early": "Мало данных", "improving": "Учится", "done": "Прошло хорошо", "converged": "Сошлось",
-    "unknown": "Нет оценки",
+    "nan": T("Развалилось (NaN)", "Blew up (NaN)"),
+    "failed": T("Ошибка", "Failed"),
+    "diverge": T("Расходится", "Diverging"),
+    "stuck": T("Не учится", "Not learning"),
+    "overfit": T("Переобучение", "Overfitting"),
+    "crashed": T("Прервано", "Interrupted"),
+    "plateau": T("Плато", "Plateau"),
+    "noisy": T("Нестабильно", "Unstable"),
+    "early": T("Мало данных", "Too early"),
+    "improving": T("Учится", "Learning"),
+    "done": T("Прошло хорошо", "Went well"),
+    "converged": T("Сошлось", "Converged"),
+    "unknown": T("Нет оценки", "No verdict"),
 }
 
 
@@ -103,21 +117,26 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
     enough = max((len(clean[k]) for k in judged), default=0) >= 10
 
     if status == "failed":
-        add("crit", "failed", "Запуск завершился с ошибкой",
-            (error or "Процесс обучения упал с исключением.").strip()[-600:])
+        add("crit", "failed", T("Запуск завершился с ошибкой", "The run ended with an error"),
+            error.strip()[-600:] if error and error.strip()
+            else T("Процесс обучения упал с исключением.", "The training process crashed with an exception."))
     elif status == "crashed":
-        add("warn", "crashed", "Связь с обучением потеряна",
-            "Процесс перестал присылать данные: его закрыли, он упал без сообщения или компьютер уснул.")
+        add("warn", "crashed", T("Связь с обучением потеряна", "Lost contact with the training process"),
+            T("Процесс перестал присылать данные: его закрыли, он упал без сообщения или компьютер уснул.",
+              "The process stopped sending data: it was closed, crashed silently, or the computer went to sleep."))
 
     for key, pts in series.items():
         if metas[key]["kind"] != "loss":
             continue
         bad = next((s for s, v in pts if v is None), None)
         if bad is not None:
-            add("crit", "nan", "В loss появились NaN или бесконечность",
-                f"«{key}» перестал быть числом на шаге {bad} — дальше обучение бессмысленно. Обычно помогает "
-                "уменьшить learning rate, включить ограничение градиентов (gradient clipping) и проверить данные "
-                "на пустые или испорченные примеры.", key, bad)
+            add("crit", "nan", T("В loss появились NaN или бесконечность", "The loss became NaN or infinite"),
+                T(f"«{key}» перестал быть числом на шаге {bad} — дальше обучение бессмысленно. Обычно помогает "
+                  "уменьшить learning rate, включить ограничение градиентов (gradient clipping) и проверить данные "
+                  "на пустые или испорченные примеры.",
+                  f"“{key}” stopped being a number at step {bad} — training past this point is meaningless. "
+                  "Lowering the learning rate, enabling gradient clipping and checking the data for empty or "
+                  "corrupted examples usually helps."), key, bad)
             break
 
     train_key, val_key = _loss_pair(clean, metas)
@@ -132,14 +151,18 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
         drop = s[0] - lo
         last = s[-1]
         if drop > 0 and i_lo < n - max(3, n // 10) and (last - lo) > 0.5 * drop and last > lo + 0.2 * abs(lo):
-            add("crit", "diverge", "Обучение расходится",
-                f"«{train_key}» опустился до {_fmt(lo)} на шаге {steps[i_lo]}, а потом вырос до {_fmt(last)}. "
-                "Модель теряет то, чему научилась. Чаще всего виноват слишком большой learning rate.",
+            add("crit", "diverge", T("Обучение расходится", "Training is diverging"),
+                T(f"«{train_key}» опустился до {_fmt(lo)} на шаге {steps[i_lo]}, а потом вырос до {_fmt(last)}. "
+                  "Модель теряет то, чему научилась. Чаще всего виноват слишком большой learning rate.",
+                  f"“{train_key}” went down to {_fmt(lo)} at step {steps[i_lo]} and then rose to {_fmt(last)}. "
+                  "The model is losing what it has learned. The usual cause is a learning rate that is too high."),
                 train_key, steps[i_lo])
         elif n >= 20 and last >= s[0] - 0.02 * abs(s[0]):
-            add("warn", "stuck", "Модель не учится",
-                f"«{train_key}» почти не изменился с начала: {_fmt(s[0])} → {_fmt(last)}. Проверьте learning rate, "
-                "разметку и то, что оптимизатору переданы параметры модели.", train_key)
+            add("warn", "stuck", T("Модель не учится", "The model is not learning"),
+                T(f"«{train_key}» почти не изменился с начала: {_fmt(s[0])} → {_fmt(last)}. Проверьте learning rate, "
+                  "разметку и то, что оптимизатору переданы параметры модели.",
+                  f"“{train_key}” has barely changed since the start: {_fmt(s[0])} → {_fmt(last)}. Check the "
+                  "learning rate, the labels, and that the optimizer was given the model's parameters."), train_key)
 
     if train_key and val_key and len(clean[val_key]) >= 6 and not codes() & {"nan", "diverge"}:
         v_steps = [s for s, _ in clean[val_key]]
@@ -157,11 +180,16 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
                 and rise > 0.03 * abs(lo) and t_last < t_at_best):
             pct = 100 * rise / abs(lo) if lo else 0
             level = "crit" if rise > 0.5 * gain or pct > 30 else "warn"
-            add(level, "overfit", "Модель переобучается",
-                f"На проверочных данных лучший результат был на шаге {v_steps[i_lo]} («{val_key}» = {_fmt(lo)}), "
-                f"с тех пор он ухудшился на {pct:.0f}%, хотя на обучающих данных loss продолжает падать. Модель "
-                f"заучивает примеры вместо того, чтобы обобщать. Берите чекпойнт с шага {v_steps[i_lo]}; дальше "
-                "помогут ранняя остановка, аугментации, регуляризация или больше данных.", val_key, v_steps[i_lo])
+            best = v_steps[i_lo]
+            add(level, "overfit", T("Модель переобучается", "The model is overfitting"),
+                T(f"На проверочных данных лучший результат был на шаге {best} («{val_key}» = {_fmt(lo)}), "
+                  f"с тех пор он ухудшился на {pct:.0f}%, хотя на обучающих данных loss продолжает падать. Модель "
+                  f"заучивает примеры вместо того, чтобы обобщать. Берите чекпойнт с шага {best}; дальше "
+                  "помогут ранняя остановка, аугментации, регуляризация или больше данных.",
+                  f"The best validation result was at step {best} (“{val_key}” = {_fmt(lo)}); since then it has "
+                  f"become {pct:.0f}% worse while the training loss keeps falling. The model is memorizing examples "
+                  f"instead of generalizing. Take the checkpoint from step {best}; next time early stopping, "
+                  "augmentation, regularization or more data will help."), val_key, best)
 
     if train_key and len(clean[train_key]) >= 30 and not codes() & {"nan", "diverge"}:
         vals = [v for _, v in clean[train_key]]
@@ -171,9 +199,12 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
         resid = math.sqrt(sum((a - b) ** 2 for a, b in zip(half, centered)) / len(half))
         level = abs(sum(centered) / len(centered)) or 1e-12
         if resid / level > 0.35:
-            add("info", "noisy", "Loss сильно скачет",
-                f"Разброс «{train_key}» от шага к шагу — около {100 * resid / level:.0f}% от его уровня. Если это мешает, "
-                "попробуйте уменьшить learning rate или увеличить batch size.", train_key)
+            noise = 100 * resid / level
+            add("info", "noisy", T("Loss сильно скачет", "The loss is very noisy"),
+                T(f"Разброс «{train_key}» от шага к шагу — около {noise:.0f}% от его уровня. Если это мешает, "
+                  "попробуйте уменьшить learning rate или увеличить batch size.",
+                  f"“{train_key}” varies from step to step by about {noise:.0f}% of its level. If that gets in the "
+                  "way, try a lower learning rate or a larger batch size."), train_key)
 
     target = main_key if main_key in clean and metas[main_key]["direction"] else None
     target = target or val_key or train_key
@@ -195,17 +226,27 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
         name = metas[target]["label"]
         if total > 0 and recent / total < 0.02:
             if status == "running":
-                add("info", "plateau", "Метрика вышла на плато",
-                    f"За последние {span} шагов «{target}» практически не улучшается (лучшее — {_fmt(best[-1])}). "
-                    "Можно останавливать обучение или снизить learning rate.", target)
+                add("info", "plateau", T("Метрика вышла на плато", "The metric has reached a plateau"),
+                    T(f"За последние {span} шагов «{target}» практически не улучшается (лучшее — {_fmt(best[-1])}). "
+                      "Можно останавливать обучение или снизить learning rate.",
+                      f"Over the last {span} steps “{target}” has barely improved (best: {_fmt(best[-1])}). "
+                      "You can stop training or lower the learning rate."), target)
             else:
-                add("ok", "converged", "Обучение сошлось",
-                    f"«{target}» вышла на уровень {_fmt(best[-1])} и к концу перестала меняться — "
-                    "модель взяла из этих настроек всё, что могла.", target)
+                add("ok", "converged", T("Обучение сошлось", "Training converged"),
+                    T(f"«{target}» вышла на уровень {_fmt(best[-1])} и к концу перестала меняться — "
+                      "модель взяла из этих настроек всё, что могла.",
+                      f"“{target}” reached {_fmt(best[-1])} and stopped changing towards the end — the model got "
+                      "everything it could out of these settings."), target)
         elif total > 0:
-            add("ok", "improving", "Модель продолжает улучшаться" if status == "running" else "Модель училась до конца",
-                f"За последние {span} шагов {name} улучшилась с {_fmt(best[cut])} до {_fmt(best[-1])}."
-                + ("" if status == "running" else " Возможно, стоит обучать дольше — запас ещё был."), target)
+            running = status == "running"
+            add("ok", "improving",
+                T("Модель продолжает улучшаться", "The model keeps improving") if running
+                else T("Модель училась до конца", "The model was learning until the end"),
+                T(f"За последние {span} шагов {name} улучшилась с {_fmt(best[cut])} до {_fmt(best[-1])}."
+                  + ("" if running else " Возможно, стоит обучать дольше — запас ещё был."),
+                  f"Over the last {span} steps {name} improved from {_fmt(best[cut])} to {_fmt(best[-1])}."
+                  + ("" if running else " Training longer may be worth it — there was still room to improve.")),
+                target)
 
     if hw and hw.get("samples", 0) >= 12:
         gpus = hw.get("gpus") or []
@@ -213,30 +254,44 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
         if busy and busy.get("util_avg") is not None:
             u = busy["util_avg"]
             if u < 5:
-                add("info", "gpu_idle", "Видеокарта не использовалась",
-                    f"Средняя загрузка {busy['name']} — {u:.0f}%. Похоже, обучение шло на процессоре: проверьте, "
-                    "что модель и данные перенесены на GPU.", hardware=True)
+                add("info", "gpu_idle", T("Видеокарта не использовалась", "The GPU was not used"),
+                    T(f"Средняя загрузка {busy['name']} — {u:.0f}%. Похоже, обучение шло на процессоре: проверьте, "
+                      "что модель и данные перенесены на GPU.",
+                      f"Average load of {busy['name']} was {u:.0f}%. Training seems to have run on the CPU: check "
+                      "that the model and the data are moved to the GPU."), hardware=True)
             elif u < 50:
-                add("warn", "gpu_low", "Видеокарта простаивает",
-                    f"{busy['name']} загружена в среднем на {u:.0f}%. Обычно это значит, что данные готовятся медленнее, "
-                    "чем модель их обрабатывает: увеличьте число воркеров загрузчика или batch size.", hardware=True)
+                add("warn", "gpu_low", T("Видеокарта простаивает", "The GPU is idle most of the time"),
+                    T(f"{busy['name']} загружена в среднем на {u:.0f}%. Обычно это значит, что данные готовятся "
+                      "медленнее, чем модель их обрабатывает: увеличьте число воркеров загрузчика или batch size.",
+                      f"{busy['name']} was loaded {u:.0f}% on average. This usually means data is prepared more "
+                      "slowly than the model consumes it: add data loader workers or increase the batch size."),
+                    hardware=True)
         for g in gpus:
             used, total = g.get("mem_max"), g.get("mem_total")
             if used and total and used / total > 0.96:
-                add("warn", "vram_full", "Видеопамять почти закончилась",
-                    f"{g['name']}: занято до {used / 2**30:.1f} из {total / 2**30:.1f} ГБ. Ещё немного — и обучение "
-                    "упадёт с Out of Memory. Уменьшите batch size или включите смешанную точность.", hardware=True)
+                add("warn", "vram_full", T("Видеопамять почти закончилась", "Video memory is almost full"),
+                    T(f"{g['name']}: занято до {used / 2**30:.1f} из {total / 2**30:.1f} ГБ. Ещё немного — и обучение "
+                      "упадёт с Out of Memory. Уменьшите batch size или включите смешанную точность.",
+                      f"{g['name']}: up to {used / 2**30:.1f} of {total / 2**30:.1f} GB in use. A little more and "
+                      "training will crash with Out of Memory. Reduce the batch size or enable mixed precision."),
+                    hardware=True)
             elif used and total and (g.get("util_avg") or 0) >= 50 and used / total < 0.35:
-                add("info", "vram_free", "Видеопамять используется слабо",
-                    f"{g['name']}: занято максимум {100 * used / total:.0f}% памяти. Можно увеличить batch size "
-                    "и обучаться быстрее.", hardware=True)
+                share = 100 * used / total
+                add("info", "vram_free", T("Видеопамять используется слабо", "Video memory is barely used"),
+                    T(f"{g['name']}: занято максимум {share:.0f}% памяти. Можно увеличить batch size "
+                      "и обучаться быстрее.",
+                      f"{g['name']}: at most {share:.0f}% of memory in use. You can increase the batch size "
+                      "and train faster."), hardware=True)
             if (g.get("temp_max") or 0) >= 87:
-                add("warn", "gpu_hot", "Видеокарта перегревается",
-                    f"{g['name']} нагревалась до {g['temp_max']:.0f} °C. При такой температуре карта сбрасывает "
-                    "частоты и работает медленнее — проверьте охлаждение.", hardware=True)
+                add("warn", "gpu_hot", T("Видеокарта перегревается", "The GPU is overheating"),
+                    T(f"{g['name']} нагревалась до {g['temp_max']:.0f} °C. При такой температуре карта сбрасывает "
+                      "частоты и работает медленнее — проверьте охлаждение.",
+                      f"{g['name']} reached {g['temp_max']:.0f} °C. At this temperature the card throttles and "
+                      "runs slower — check the cooling."), hardware=True)
         if (hw.get("ram_max_pct") or 0) > 96:
-            add("warn", "ram_full", "Оперативная память на пределе",
-                f"Занято до {hw['ram_max_pct']:.0f}% RAM — система может начать тормозить или завершить процесс.",
+            add("warn", "ram_full", T("Оперативная память на пределе", "System memory is at its limit"),
+                T(f"Занято до {hw['ram_max_pct']:.0f}% RAM — система может начать тормозить или завершить процесс.",
+                  f"Up to {hw['ram_max_pct']:.0f}% of RAM in use — the system may slow down or kill the process."),
                 hardware=True)
 
     rank = {c: i for i, c in enumerate(("nan", "diverge", "stuck", "overfit", "failed", "crashed"))}
@@ -246,8 +301,9 @@ def analyze(series: dict, metas: dict | None = None, *, status: str = "running",
         verdict_code, health = "unknown", None
     elif not enough and not any(f["level"] == "crit" for f in training):
         verdict_code, health = "early", None
-        add("info", "early", "Пока мало данных",
-            "Для выводов нужно хотя бы десять точек loss или метрики качества — диагноз появится чуть позже.")
+        add("info", "early", T("Пока мало данных", "Not enough data yet"),
+            T("Для выводов нужно хотя бы десять точек loss или метрики качества — диагноз появится чуть позже.",
+              "A verdict needs at least ten points of loss or a quality metric — it will appear a little later."))
     else:
         verdict_code = training[0]["code"] if training else "improving"
         penalty = sum((_HW_PENALTY if f["hardware"] else _PENALTY)[f["level"]] for f in findings)

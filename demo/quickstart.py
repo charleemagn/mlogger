@@ -25,7 +25,7 @@ config = {"model": "tiny-cnn", "optimizer": "adam", "lr": 3e-3, "batch_size": 64
 run = mlogger.init(
     project="quickstart",
     config=config,
-    tags=["пример"],
+    tags=["example"],
     total_steps=EPOCHS,
     main_metric="val/accuracy",
 )
