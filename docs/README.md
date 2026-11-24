@@ -1,12 +1,12 @@
 <div align="center">
 <a href="https://github.com/charleemagn/mlogger">
-<img src="../../readme_files/logo.png" alt="MLogger" width=380>
+<img src="../readme_files/logo.png" alt="MLogger" width=380>
 </a>
 </div>
 
 <div align="center">
 
-**English** | [Русский](../../readme_files/ru/README.md)
+**English** | [Русский](../readme_files/ru/README.md)
 
 </div>
 
@@ -15,12 +15,12 @@
 [![mlogger-tests](https://github.com/charleemagn/mlogger/actions/workflows/test-python.yml/badge.svg)](https://github.com/charleemagn/mlogger/actions/workflows/test-python.yml)
 [![Python](https://img.shields.io/badge/python-3.9%2B-3776ab)](https://www.python.org/downloads/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-2aa2b9)](#installation)
-[![License](https://img.shields.io/badge/license-GPL--3.0-5f6b76)](../../LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-5f6b76)](../LICENSE)
 
 [Installation](#installation)
 | [First Run](#tracking-your-first-run)
 | [Integrations](#framework-integrations)
-| [Examples](../../demo/)
+| [Examples](../demo/)
 | [Contributing](CONTRIBUTING.md)
 
 </div>
@@ -29,7 +29,7 @@
 
 MLogger is an open-source experiment tracker that runs entirely on your own machine. It **records** the metrics of your training runs, **watches** your GPUs, and **explains in plain language** what is going on: the model is learning, overfitting, stuck on a plateau, or has blown up. No account, no cloud, no dependencies — just Python.
 
-<img src="../../readme_files/overview.png" alt="MLogger overview page">
+<img src="../readme_files/overview.png" alt="MLogger overview page">
 
 It takes three lines of Python to connect a training script, so let's get started.
 
@@ -41,7 +41,7 @@ There are two ways to run MLogger. Both keep everything on your computer and use
 
 Download `MLogger-win-x64.zip` from the [Releases](https://github.com/charleemagn/mlogger/releases) page, unpack it anywhere and run **`MLogger.exe`**. Nothing else needs to be installed — Python is included in the archive.
 
-<img src="../../readme_files/desktop.png" alt="MLogger as a Windows app">
+<img src="../readme_files/desktop.png" alt="MLogger as a Windows app">
 
 The app opens MLogger in its own window and starts the local server by itself. When you close the window it stays in the system tray and keeps collecting metrics, so a training run is never left without a tracker; choose **Exit** in the tray menu to quit completely. Your history is stored in `%LOCALAPPDATA%\MLogger`, so replacing the app folder with a newer version does not touch it.
 
@@ -97,7 +97,7 @@ run.finish()
 
 Run your script. The run appears in the interface immediately and its charts update live:
 
-<img src="../../readme_files/run.png" alt="MLogger run page with the training diagnosis and charts">
+<img src="../readme_files/run.png" alt="MLogger run page with the training diagnosis and charts">
 
 > [!TIP]
 > Name your metrics `train/...` and `val/...` (or `train_loss`, `val_loss`). MLogger then draws them on one chart and can detect overfitting. `log()` accepts plain numbers, NumPy scalars and tensors.
@@ -132,19 +132,19 @@ Each verdict comes with an explanation and a next step, for example *"the best v
 
 Hardware history is recorded only while a run is in progress and is attached to that run, so you can see how each card was loaded during training. Check what the monitor sees with `python -m monitor`.
 
-<img src="../../readme_files/hardware.png" alt="MLogger hardware page with two GPUs from different vendors">
+<img src="../readme_files/hardware.png" alt="MLogger hardware page with two GPUs from different vendors">
 
 #### Comparing runs
 
 Select several runs and put the same metrics on shared charts, next to a table of the hyperparameters that differ.
 
-<img src="../../readme_files/compare.png" alt="MLogger run comparison">
+<img src="../readme_files/compare.png" alt="MLogger run comparison">
 
 #### Tags, search and filters
 
 Give runs colored tags in code or in the interface, then filter by tag, project and status, or search by name and hyperparameters.
 
-<img src="../../readme_files/runs.png" alt="MLogger run list">
+<img src="../readme_files/runs.png" alt="MLogger run list">
 
 #### Importing existing logs
 
@@ -204,7 +204,7 @@ When started from source, everything is stored in a single SQLite file, `data/ml
 
 ### What's Next?
 
-- Browse the [examples](../../demo/): a dependency-free quickstart and a plain PyTorch training loop.
+- Browse the [examples](../demo/): a dependency-free quickstart and a plain PyTorch training loop.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn how the repository is organized and how to run the tests.
 - See [CHANGELOG.md](CHANGELOG.md) for what is in the current release.
 
@@ -225,11 +225,11 @@ MLogger deliberately has no third-party dependencies. It is built on:
 
 ## License
 
-MLogger is licensed under the GNU General Public License v3.0 found in the [LICENSE](../../LICENSE) file in the root directory of this repository.
+MLogger is licensed under the GNU General Public License v3.0 found in the [LICENSE](../LICENSE) file in the root directory of this repository.
 
 ## Citation
 
-If you use MLogger in your work, you can cite it using the metadata in [CITATION.cff](../../CITATION.cff):
+If you use MLogger in your work, you can cite it using the metadata in [CITATION.cff](../CITATION.cff):
 
 ```
 @software{mlogger,

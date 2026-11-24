@@ -55,7 +55,7 @@ The interface is plain JavaScript without a build step: edit a file in `ui/`, re
 - `demo/` — runnable examples
 - `test/` — tests
 - `readme_files/` — images for the README; `readme_files/ru/` holds the Russian README and its screenshots
-- `.github/docs/` — documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`)
+- `docs/` — documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`)
 
 ## 🚀 Run MLogger
 
@@ -108,7 +108,7 @@ MLogger speaks Russian and English, and every user-facing text must exist in bot
 - **Server, diagnosis and glossary** — build texts with `T("русский", "English")` from the `i18n` package. The API returns them in the language of the request.
 - **Command line** — `start.py` and `monitor/__main__.py` use a local `_("русский", "English")` helper.
 - **Windows app** — texts live in `desktop/Strings.cs` as `Pick("русский", "English")`.
-- **README** — `.github/docs/README.md` is the English version and `readme_files/ru/README.md` the Russian one; keep them in sync.
+- **README** — `docs/README.md` is the English version and `readme_files/ru/README.md` the Russian one; keep them in sync.
 
 The tests fail if an interface string has no English translation or if Russian text is left outside `t()`.
 
